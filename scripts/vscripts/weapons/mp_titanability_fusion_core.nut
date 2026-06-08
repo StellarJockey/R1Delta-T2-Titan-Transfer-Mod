@@ -267,7 +267,7 @@ function EndMissileCore( soul )
 	if ( titan.GetOffhandWeapon( 0 ) != null )
 		titan.TakeOffhandWeapon( 0 )
 
-	thread ReplaceTitanWeapon( titan, player_ordnance, [ "mod_ordnance_core", "burn_mod_titan_salvo_rockets" ], "ordnance" )
+	thread ReplaceTitanWeapon( titan, ordnance_before_replace, o_mods, "ordnance" )
 }
 
 function StartMissileCore( soul )
@@ -350,7 +350,7 @@ function EndPiercerCore( soul )
 	if ( titan.GetOffhandWeapon( 0 ) != null )
 		titan.TakeOffhandWeapon( 0 )
 	
-	thread ReplaceTitanWeapon( titan, player_ordnance, [], "ordnance" )
+	thread ReplaceTitanWeapon( titan, ordnance_before_replace, o_mods, "ordnance" )
 }
 
 function StartPiercerCore( soul )//decided they should have their shields with it since Ion is energy based.
