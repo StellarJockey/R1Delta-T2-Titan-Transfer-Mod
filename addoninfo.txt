@@ -1,0 +1,11 @@
+"AddonInfo"
+{
+	"addontitle"			"Titanfall2 Titan Transfer"
+	"addonDescription"		"My attempt to add Titanfall2 titans to some success. It is missing Tone as I kept getting an EXCEPTION_ACCESS_VIOLATION assert 1 error on crowbar unfortunately. NOTE: Before going onto other servers that don't have this mod; change all chassis types from the Mod's titans to standard titans then remove the mod from the addon folder, this is because mods with massive overhauls tend to "stick" and cause crashes even when disabled.
+
+NOTE2: If you get a server script error with hover do not mind it, it will not break the game and when you get hover back it will work as normal."
+	"addonversion"			"1.0.0"
+	"addonauthor"			"Yoshi the Hut"
+
+	"addonContent_Script"	"1"
+}
