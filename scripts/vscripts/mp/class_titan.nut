@@ -186,7 +186,7 @@ function GiveTitanWeaponsForPlayer( player, titan, existingTitan = false )
 			offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 		}
 
-		if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
+		if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
 		{
 			offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 		}
@@ -290,7 +290,7 @@ function GiveHotDropTitanWeaponsForPlayer( player, titan )
 		offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 	}
 	
-	if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
+	if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
 	{
 		offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 	}
@@ -352,7 +352,7 @@ function GiveTitanWeaponsForLoadoutData( titan, table )
 		offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 	}
 	
-	if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
+	if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
 	{
 		offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 	}
