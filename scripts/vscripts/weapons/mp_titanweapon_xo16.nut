@@ -1,45 +1,34 @@
 AMMO_BODYGROUP_COUNT <- 0
-SmartAmmo_SetAllowUnlockedFiring( self, true )
-SmartAmmo_SetUnlockAfterBurst( self, false )
-function init_smartness()
-{
-	if( self.HasMod( "smart_core" ) )
-	{
-		SmartAmmo_SetWarningIndicatorDelay( self, 9999.0 )
-	}
-}
 
-function OnWeaponActivate( activateParams )
+function OnWeaponActivate( weapon, player = null )
 {
-	AMMO_BODYGROUP_COUNT <- min( self.GetWeaponModSetting( "ammo_clip_size" ), 6 )
-	UpdateViewmodelAmmo()
-	SmartAmmo_Start( self )
+	AMMO_BODYGROUP_COUNT <- min( self.GetWeaponModSetting( "ammo_clip_size" ), 6 ) 
+	UpdateViewmodelAmmo() 
 
-	if ( IsServer() )
+	if (!( "burstFireCount" in self.s ) )
 	{
-		if ( !( "deactivationTime" in self.s ) )
+		if ( IsServer() || ( IsClient() && self.GetOwner() == GetLocalViewPlayer() ) )
 		{
-			self.s.deactivationTime <- 0
+			if ( self.HasMod( "burst" ) )
+			{
+				self.s.burstFireCount <- self.GetWeaponModSetting("burst_fire_count")
+				self.SetWeaponPrimaryClipCount( 56 )  // DELETE WHEN UPDATE IS LIVE
+			}
 		}
 	}
 
-	if ( !( "burstFireCount" in self.s ) )
+	if ( IsServer() ) 
 	{
-		if ( self.HasMod( "burst" ) )
-			self.s.burstFireCount <- self.GetWeaponModSetting( "burst_fire_count" )
-		else
-			self.s.burstFireCount <- 0
+		if ( !( "deactivationTime" in self.s ) ) 
+		{
+			self.s.deactivationTime <- 0 
+		}
 	}
 
-	if( self.HasMod( "smart_core" ) )
-	{
-		SmartAmmo_Start( self )
-	}
-
-	if ( !self.HasMod( "accelerator" ) && !self.HasMod( "burst" ) )
+	if ( !self.HasMod( "accelerator" ) && !self.HasMod( "burst" ) ) 
 	{
 		SetLoopingWeaponSound_1p3p( "Weapon.XO16_fire_first", "Weapon.XO16_fire_loop", "Weapon.XO16_fire_last",
-		                            "Weapon.XO16_fire_first_3P", "Weapon.XO16_fire_loop_3P", "Weapon.XO16_fire_last_3P" )
+		                            "Weapon.XO16_fire_first_3P", "Weapon.XO16_fire_loop_3P", "Weapon.XO16_fire_last_3P" ) 
 	}
 }
 
@@ -49,40 +38,8 @@ function OnWeaponDeactivate( deactivateParams )
 		self.s.deactivationTime = Time()
 
 	self.ClearLoopingWeaponSound()
-	if( self.HasMod( "smart_core" ) )
-	{
-		SmartAmmo_Stop( self )
-	}
 }
 
-function OnWeaponOwnerChanged( changeParams )
-{
-	if ( IsClient() )
-	{
-		if ( changeParams.newOwner != null && changeParams.newOwner == GetLocalViewPlayer() )
-			UpdateViewmodelAmmo()
-		local viewPlayer = GetLocalViewPlayer() 
-		if ( changeParams.newOwner != null && changeParams.newOwner == viewPlayer )
-		{
-			SmartAmmo_Start( self )
-		}
-		else if ( changeParams.oldOwner == viewPlayer )
-		{
-			SmartAmmo_Stop( self, changeParams.oldOwner )
-		}		
-	}
-	else
-	{
-		if ( changeParams.newOwner != null )
-		{
-			SmartAmmo_Start( self )
-		}
-		else
-		{
-			SmartAmmo_Stop( self, changeParams.oldOwner )
-		}
-	}
-}
 
 function OnClientAnimEvent( name )
 {
@@ -91,18 +48,14 @@ function OnClientAnimEvent( name )
 
 function OnWeaponPrimaryAttack( attackParams )
 {
+	self.EmitWeaponNpcSound( LOUD_WEAPON_AI_SOUND_RADIUS_MP, 0.2 )
+
 	local damageType = damageTypes.LargeCaliber | DF_STOPS_TITAN_REGEN
 	if ( self.HasMod( "burn_mod_titan_xo16" ) )
 		damageType = damageType | damageTypes.Electric
-	
-	if ( self.HasMod( "smart_core" ) )
-	{
-		damageType = damageType | damageTypes.Instant
-		return SmartAmmo_FireWeapon( self, attackParams, damageType | damageTypes.Bullet )
-	}
 
 	self.FireWeaponBullet( attackParams.pos, attackParams.dir, 1, damageType )
-	self.EmitWeaponNpcSound( LOUD_WEAPON_AI_SOUND_RADIUS_MP, 0.2 )
+
 }
 
 function OnWeaponNpcPrimaryAttack( attackParams )
@@ -116,7 +69,7 @@ function OnWeaponNpcPrimaryAttack( attackParams )
 			return
 
 		if ( !( "burstShotsRemaining" in self.s ) )
-			self.s.burstShotsRemaining <- self.s.burstFireCount
+			self.s.burstShotsRemaining <- 8
 
 		if ( !( "burstActive" in self.s ) )
 			self.s.burstActive <- false
@@ -131,6 +84,8 @@ function OnWeaponNpcPrimaryAttack( attackParams )
 
 	self.FireWeaponBullet( attackParams.pos, attackParams.dir, 1, damageType )
 
+	self.EmitWeaponNpcSound( LOUD_WEAPON_AI_SOUND_RADIUS, 0.2 )
+
 	if ( self.HasMod( "burst" ) )
 	{
 		self.s.burstActive = true
@@ -139,7 +94,7 @@ function OnWeaponNpcPrimaryAttack( attackParams )
 		if ( self.s.burstShotsRemaining <= 0 )
 		{
 			self.s.burstActive = false
-			self.s.burstShotsRemaining = self.s.burstFireCount
+			self.s.burstShotsRemaining = 8
 			self.s.npcNextFireTime <- Time() + 0.6
 		}
 	}
@@ -155,18 +110,11 @@ function OnWeaponStartZoomOut()
 	HandleWeaponSoundZoomOut( self, "Weapon_X016.ADS_Out" )
 }
 
-function SmartWeaponFireSound( weapon, target )
+function OnWeaponOwnerChanged( changeParams )
 {
-	//if ( weapon.HasMod( "silencer" ) )
-	//{
-		//weapon.EmitWeaponSound( "Weapon_SmartPistol.SuppressedFire_Layer1" )
-	//}
-	//else
-	//{
-	if ( target == null )
-		weapon.EmitWeaponSound( "Weapon_SmartPistol.Fire" )
-	else
-		weapon.EmitWeaponSound( "Weapon_SmartPistol.Fire" )
-	//}
+	if ( IsClient() )
+	{
+		if ( changeParams.newOwner != null && changeParams.newOwner == GetLocalViewPlayer() )
+			UpdateViewmodelAmmo()
+	}
 }
-init_smartness()

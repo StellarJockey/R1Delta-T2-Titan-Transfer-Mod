@@ -4,6 +4,7 @@ function main()
 	Globalize( CodeCallback_IsValidRodeoTarget )
 	Globalize( GetTitanSoulBeingRodeoed )
 	Globalize( GetTitanBeingRodeoed )
+	Globalize( AllowTeamRodeo )
 	Globalize( GetPlayerRodeoing )
 	Globalize( GetRodeoPackage )
 	Globalize( GetFriendlyRodeoPlayer )
@@ -22,6 +23,7 @@ function main()
 	Globalize( SetRodeoAnimsFromPackage )
 	Globalize( DebugRodeoTimes )
 	Globalize( SetDebugRodeoAnim ) // Set to force a particular rodeo anim to occur
+	Globalize( CreateRodeoPackageForJumpingOn )
 
 	RegisterSignal( "RodeoStarted" )
 	RegisterSignal( "RodeoOver" )
@@ -84,8 +86,8 @@ function main()
 	AddAnimAlias( "stryder", "pt_rodeo_move_back_lower_entrance",	"pt_rodeo_move_stryder_back_lower_entrance" )
 	AddAnimAlias( "stryder", "pt_rodeo_move_left_entrance",		"pt_rodeo_move_stryder_left_entrance" )
 
-	/*
-    AddAnimAlias( "destroyer", "ptpov_rodeo_move_back_idle",               "ptpov_rodeo_move_destroyer_back_idle" )
+    /*
+	AddAnimAlias( "destroyer", "ptpov_rodeo_move_back_idle",               "ptpov_rodeo_move_destroyer_back_idle" )
     AddAnimAlias( "destroyer", "ptpov_rodeo_move_back_entrance",          "ptpov_rodeo_move_destroyer_back_entrance" )
     AddAnimAlias( "destroyer", "ptpov_rodeo_move_right_entrance",         "ptpov_rodeo_move_destroyer_right_entrance" )
     AddAnimAlias( "destroyer", "ptpov_rodeo_move_front_entrance",         "ptpov_rodeo_move_destroyer_front_entrance" )
@@ -171,7 +173,7 @@ function main()
 	AddAnimAlias( "special_stryder", "pt_rodeo_move_back_lower_entrance",	"pt_rodeo_move_stryder_back_lower_entrance" )
 	AddAnimAlias( "special_stryder", "pt_rodeo_move_left_entrance",		"pt_rodeo_move_stryder_left_entrance" )
 	
-	
+
         // Hatch rip anims:
 
 	AddAnimAlias( "atlas", "pt_rodeo_panel_fire", 						"pt_rodeo_panel_fire" )
@@ -222,7 +224,7 @@ function main()
 	AddAnimAlias( "stryder", "ptpov_rodeo_panel_aim_idle_move", 			"ptpov_stryder_rodeo_panel_aim_idle_move" )
 	AddAnimAlias( "stryder", "ptpov_rodeo_player_side_lean_enemy", 		"ptpov_Rodeo_stryder_player_side_lean" )
 
-	
+
 	AddAnimAlias( "special_atlas", "pt_rodeo_panel_fire", 						"pt_rodeo_panel_fire" )
 	AddAnimAlias( "special_atlas", "at_rodeo_panel_opening", 					"hatch_rodeo_panel_opening" )
 	AddAnimAlias( "special_atlas", "at_rodeo_panel_close_idle", 				"hatch_rodeo_panel_close_idle" )
@@ -318,6 +320,43 @@ function main()
 
 		AddCallback_OnClientConnected( Rodeo_OnClientConnected )
 	}
+
+	file.allowedarray <- []
+}
+
+function AllowTeamRodeo( titan, trueorfalse )
+{
+	local allowedarray = []
+	foreach ( npc in file.allowedarray )
+	    if ( IsValid( npc ) && IsAlive( npc ) )
+	        allowedarray.append( npc )
+	if ( !IsValid( titan ) || !IsAlive( titan ) )
+	    return
+	if ( trueorfalse == true )
+	    allowedarray.append( titan )
+	if ( trueorfalse == false )
+	{
+		local newallowedarray = []
+		foreach ( npc in allowedarray )
+		    if ( npc != titan )
+		        newallowedarray.append( npc )
+		allowedarray = newallowedarray
+	}
+	file.allowedarray = allowedarray
+}
+
+function IsAllowedTeamRodeo( titan )
+{
+	local validallowedarray = []
+	foreach ( npc in file.allowedarray )
+	    if ( IsValid( npc ) && IsAlive( npc ) )
+	        validallowedarray.append( npc )
+	file.allowedarray = validallowedarray
+	foreach ( npc in validallowedarray )
+	    if ( npc == titan )
+	        return true
+
+	return false
 }
 
 function CodeCallback_OnRodeoAttach( player, titan )
@@ -403,7 +442,7 @@ function IsValidTitanRodeoTarget( player, titan )
 			return false
 		if ( !IsValid( soul.GetBossPlayer() ) )
 		{
-			if ( player.GetTeam() == titan.GetTeam() )
+			if ( player.GetTeam() == titan.GetTeam() && !IsAllowedTeamRodeo( titan ) )
 				return false
 		}
 	}
@@ -1250,7 +1289,7 @@ function TakeAwayFriendlyRodeoPlayerProtection( titan )
 function DebugRodeoTimes()
 {
 	local settings = [ "atlas", "ogre", "stryder", "special_atlas", "special_ogre", "special_stryder" ]
-
+	
 	local models = [ "models/Humans/imc_pilot/male_cq/imc_pilot_male_cq.mdl", "models/humans/pilot/female_cq/pilot_female_cq.mdl" ]
 	local times = {}
 
@@ -1341,6 +1380,7 @@ function SpectreFallingOntoTitan( spectre, titan )
 
 	return true
 }
+Globalize( SpectreFallingOntoTitan )
 
 function HoldToRodeoEnabled( player )
 {

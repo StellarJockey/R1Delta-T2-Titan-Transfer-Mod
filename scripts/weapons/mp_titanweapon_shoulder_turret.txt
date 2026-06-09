@@ -1,0 +1,54 @@
+WeaponData
+{
+	// General
+	"printname"   									"Shoulder Turret"
+	"description" 									"Hull-mounted sentry gun"
+	"longdesc"									"The Shoulder Turret is a Pilot sentry gun retrofitted for Titan use. Select an enemy target, and it will fire for 15 seconds. While it is active, you may switch to a new target at any time."
+	
+	"weaponClass" 									"titan"
+	"fire_mode"   									"offhand_instant"
+	"server_vscript"  								"weapons/mp_titanweapon_shoulder_turret"
+	"client_vscript"  								"weapons/mp_titanweapon_shoulder_turret"
+
+	"damage_type" 									"none"
+
+	// Ammo
+	"ammo_stockpile_max"									"200"
+	"ammo_clip_size"   									"200"
+	"ammo_default_total"									"200"
+
+	// Behavior
+	"fire_rate"   									"0.04"
+	"fire_duration"									"15.0"
+	// "charge_cooldown_time" 								"15.0"
+
+	"hud_icon"									"HUD/dpad_call_in_shoulder_turret"
+	// Crosshair
+
+	Mods
+	{
+		mod_ordnance_core
+		{
+			"charge_cooldown_time"							"/1.25"
+		}
+
+		dev_mod_low_recharge
+		{
+			"charge_cooldown_time"   									"/20"
+		}
+
+	}
+
+	TextureData
+	{
+		"crosshair"
+		{
+		}
+		"crosshair_zoom"
+		{
+		}
+		"autoaim"
+		{
+		}
+	}
+}

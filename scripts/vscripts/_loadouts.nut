@@ -383,6 +383,12 @@ function SetImageFromItemCoreImage( element, ref )
 function GetSetFileFromPrimaryWeaponAndPersistentData( ref, isFemale )
 {
 	local setFile
+	
+	if ( ref == null || ref == "" )
+	{
+		// If the weapon is missing or corrupted, default to the R-101C Carbine
+		ref = "mp_weapon_rspn101" 
+	}
 
 	local bodyType = GetWeaponInfoFileKeyField_Global( ref, "body_type" )
 
@@ -660,7 +666,7 @@ function GetUnlockLevelForCustomLoadout( loadoutClass, slot )
 {
 	if ( loadoutClass == "pilot" )
 		return unlockLevels[ "pilot_custom_loadout_" + ( slot + 1 ) ]
-	else if ( loadoutClass = "titan" )
+	else if ( loadoutClass == "titan" )
 		return unlockLevels[ "titan_custom_loadout_" + ( slot + 1 ) ]
 	else
 		Assert( 0, "Invalid loadout class" )

@@ -509,8 +509,6 @@ function CreateSpawnNPCTitanTemplate( team, settings )
 	table.decal 	<- null
 	table.core		<- null
 
-	
-
 	SetModelSkinFromSettings( table, settings, team ) // Use the table-populating function
 	table.team      = team
 	table.settings  = settings
@@ -522,7 +520,7 @@ function CreateDefaultNPCTitanTemplate( team )
 {
 	local settings 	= null
 	local table 	= CreateSpawnNPCTitanTemplate( team, settings )
-	table.health 	= 5000
+	table.health 	= 6200
 	table.maxHealth	= table.health
 	table.weapon 	= "mp_titanweapon_xo16"
 
@@ -718,9 +716,9 @@ function SpawnNPCTitan( table )
 	DispatchSpawn( npcTitan, true )
 
 	npcTitan.SetAllowJump( false )	// need to setup traverse animations
-	npcTitan.StayPut( true )
+	npcTitan.StayPut( false )
 	npcTitan.SetAISettings( "titan" )
-	npcTitan.SetEngagementDistVsStrong( 0, 4000 )
+	npcTitan.SetEngagementDistVsStrong( 0, 6000 )
 
 	ApplyTitanColor(npcTitan, settings)
 
@@ -759,6 +757,31 @@ function SetTitanAccuracyAndProficiency( npcTitan, lethality )
 			case eAILethality.TD_Medium:
 				accuracyMultiplier = 0.75
 				weaponProficiency = 2
+				break
+
+			case eAILethality.High:
+				accuracyMultiplier = 2.0
+				weaponProficiency = 3
+				break
+
+			case eAILethality.VeryHigh:
+				accuracyMultiplier = 3.0
+				weaponProficiency = 4
+				break
+		}
+	}
+	else
+	{
+		switch ( lethality )
+		{
+			case eAILethality.High:
+				accuracyMultiplier = 2.0
+				weaponProficiency = 3
+				break
+
+			case eAILethality.VeryHigh:
+				accuracyMultiplier = 4
+				weaponProficiency = 4
 				break
 		}
 	}

@@ -113,7 +113,6 @@ function main()
 	AddCinematicEventFlagChangedCallback( CE_FLAG_INTRO, CinematicEventFlagChanged )
 	AddCinematicEventFlagChangedCallback( CE_FLAG_CLASSIC_MP_SPAWNING, CinematicEventFlagChanged )
 	AddCinematicEventFlagChangedCallback( CE_FLAG_EOG_STAT_DISPLAY, CinematicEventFlagChanged )
-	//AddCinematicEventFlagChangedCallback( CE_FLAG_PERMANENT_HIDEHUD, CinematicEventFlagChanged )
 
 	RegisterConCommandTriggeredCallback( "weaponSelectOrdnance", SwitchedToOrdnance )
 
@@ -2817,12 +2816,12 @@ function ClientCodeCallback_OnSelectedWeaponChanged( selectedWeapon )
 			else
 				HideChargeAmmoBar( selectedWeapon, player )
 			break
-
+/*
 		case "mp_weapon_mega3":
 			DisplayChargeAmmoBar( selectedWeapon, player, 1, 0, cockpit )
 //			HideWeaponAmmoUI( cockpit )
 			break
-
+*/
 		default:
 			HideChargeAmmoBar( selectedWeapon, player )
 			break
@@ -3337,9 +3336,6 @@ function ShouldMainHudBeVisible( player )
 
 	if ( ceFlags & CE_FLAG_EOG_STAT_DISPLAY )
 		return false
-
-	//if ( ceFlags & CE_FLAG_PERMANENT_HIDEHUD )
-		//return false
 
 	local gameState = GetGameState()
 

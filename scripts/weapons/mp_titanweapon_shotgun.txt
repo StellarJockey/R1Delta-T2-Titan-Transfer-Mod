@@ -31,8 +31,8 @@ WeaponData
     "tracer_effect"                                   "weapon_tracers_xo_shotgun"
     "tracer_effect_first_person"                      "weapon_tracers_xo_shotgun"
     "impact_effect_table"                             "titan_bullet"
-    //"vortex_absorb_effect"                            "wpn_vortex_projectile_shotgun_FP"
-    //"vortex_absorb_effect_third_person"                "wpn_vortex_projectile_shotgun"
+    //"vortex_absorb_effect"                          "wpn_vortex_projectile_shotgun_FP"
+    //"vortex_absorb_effect_third_person"             "wpn_vortex_projectile_shotgun"
 	"vortex_absorb_effect"                            "wpn_vortex_projectile_40mm_FP"
 	"vortex_absorb_effect_third_person"               "wpn_vortex_projectile_40mm"
     
@@ -62,20 +62,20 @@ WeaponData
     "damage_far_value"                               "60"
     "damage_falloff_type"                            "inverse"
     "damage_inverse_distance"                        "350"
-    "damage_near_value_titanarmor"                   "1000"
-    "damage_far_value_titanarmor"                    "250" //"550"
+    "damage_near_value_titanarmor"                   "1150" // "1000"
+    "damage_far_value_titanarmor"                    "250" // "550"
     
 
     "impulse_force"                                   "5000" //"15000"
     "critical_hit_damage_scale"                       "3.0"
 
     // Damage - When Used by NPCs
-    "npc_damage_near_distance"                        "200" //"100"
-    "npc_damage_far_distance"                         "2000" //"1200"
-    "npc_damage_near_value"                           "180"
+    "npc_damage_near_distance"                        "150" //"100"
+    "npc_damage_far_distance"                         "1500" //"1200"
+    "npc_damage_near_value"                           "215"
     "npc_damage_far_value"                            "60"
-    "npc_damage_near_value_titanarmor"                "100" //"1050" //basically have to neuter them because they deal a SHIT ton of damage
-    "npc_damage_far_value_titanarmor"                 "100" //"400"
+    "npc_damage_near_value_titanarmor"                "200" //"1050" //basically have to neuter them because they deal a SHIT ton of damage
+    "npc_damage_far_value_titanarmor"                 "250" //"400"
 
 
     // Ammo
@@ -86,7 +86,7 @@ WeaponData
     // Behavior
     "fire_rate"                                       "5.5"
     "burst_fire_count"								  "3"
-	"burst_fire_delay"								  "1.0" //"0.6"
+	"burst_fire_delay"								 "0.8" // "1.0" "0.6"
     "zoom_time_in"                                    "0.1"
     "zoom_time_out"                                   "0.1"
     "zoom_fov"                                        "50" //"58"
@@ -100,7 +100,6 @@ WeaponData
     "allow_empty_click"                               "1"
     "empty_reload_only"                               "0"
     "trigger_snipercam"                               "1"
-    "primary_fire_does_not_block_sprint"			  "0"
     "allow_headshots"                                 "1" //"0"
     "headshot_distance"                             "2000"
     "damage_headshot_scale"                         "1.5"
@@ -216,7 +215,7 @@ WeaponData
     "npc_max_range"                                   "1500"
 	"npc_min_burst"                                   "3" //"1"
 	"npc_max_burst"                                   "3"
-	"rest_time_between_bursts_min"                    "1.5" //"0.5"
+	"rest_time_between_bursts_min"                    "0.8" //"0.5"
 	"rest_time_between_bursts_max"                    "2.2" //"1"
 
     // WeaponED Unhandled Key/Values and custom script Key/Values
@@ -298,6 +297,32 @@ WeaponData
 			"ammo_clip_size"   								"12"
 			"ammo_default_total"							"1500"
 		}
+
+
+		"semi_converter"
+		{
+            "fire_rate"                                      "9"
+            "burst_fire_delay"								 "0.6"
+
+            "damage_near_distance"                           "*0.5"
+            "damage_far_distance"                            "*0.5"
+            "npc_damage_near_distance"                       "*0.5"
+            "npc_damage_far_distance"                        "*0.5"
+
+            /*
+            "damage_near_value"                              "*0.9"
+            "damage_far_value"                               "*0.9"
+            "damage_near_value_titanarmor"                   "*0.9"
+            "damage_far_value_titanarmor"                    "*0.9"
+
+
+            "npc_damage_near_value"                          "*0.9"
+            "npc_damage_far_value"                           "*0.9"
+            "npc_damage_near_value_titanarmor"               "*0.9"
+            "npc_damage_far_value_titanarmor"                "*0.9"
+            */
+		}
+
 		burn_mod_titan_shotgun
 		{
 			// TODO
@@ -305,30 +330,6 @@ WeaponData
 			"crosshair_index"								"2"
 			"is_burn_mod"									"1"
 		}
-        full_burst
-        {
-            "burst_fire_count"								  "9"
-            "fire_rate"                                       "*1.5"
-        	"burst_fire_delay"								  "*0.1"
-            "reload_time"                                     "*1.5"
-            "reload_time_late1"                               "*1.5"
-            "reloadempty_time"                                "*1.5"
-            "reloadempty_time_late1"                          "*1.5"
-        }
-        auto_burst
-        {
-            "fire_mode"                                       "auto"
-            "ammo_clip_size"                                  "12"
-            "ammo_stockpile_max"                              "96"
-            "burst_fire_count"								  "1"
-            "fire_rate"                                       "*1.1"
-        	"burst_fire_delay"								  "*0.1"
-            "reload_time"                                     "*1.2"
-            "reload_time_late1"                               "*1.2"
-            "reloadempty_time"                                "*1.2"
-            "reloadempty_time_late1"                          "*1.2"
-            "primary_fire_does_not_block_sprint"			  "1"
-        }
     }
 
     CrosshairData
