@@ -92,12 +92,14 @@ function PlayerUsedTitanCore( player )
 			endSoulFunc = EndMissileCore
 			break
 		
+		/*
 		case "smart_core":
 			passive = PAS_FUSION_CORE
 			startSoulFunc = StartSmartCore
 			endSoulFunc = EndSmartCore
 			break
-		
+		*/
+
 		case "bullet_storm":
 			passive = PAS_FUSION_CORE
 			startSoulFunc = StartBulletStormCore
@@ -287,6 +289,7 @@ function StartMissileCore( soul )
 	thread ReplaceTitanWeapon( titan, ordnance_name, ["dev_mod_low_recharge"], "ordnance" )
 }//why tf did i make missile core again?
 
+/*
 function EndSmartCore( soul )
 {
 	local titan = soul.GetTitan()
@@ -315,6 +318,7 @@ function StartSmartCore( soul )//do i use minigun....do i use XO16? do i use... 
 	//titan.GiveWeapon( "mp_weapon_mega3", ["smart_core"] )//super smort
 	//shit, i got a calculating bitfield error, hol on. the _passives_shared doesnt include gun passives though..., not so smort now ;-;
 }
+*/
 
 function EndBulletStormCore( soul )
 {
