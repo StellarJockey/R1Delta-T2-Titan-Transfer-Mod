@@ -52,8 +52,8 @@ WeaponData
 
 	// Damage - When Used by Players
 	"damage_type" 									"buckshot"
-	"damage_near_distance"							"300" // "270"
-	"damage_far_distance" 							"850"
+	"damage_near_distance"							"380"  // "270"
+	"damage_far_distance" 							"1000" // "850"
 	"damage_near_value"   							"285"
 	"damage_far_value"								"30"
 	"damage_falloff_type"							"inverse"
@@ -63,9 +63,9 @@ WeaponData
 	"damage_rodeo" 									"550"
 
 	// Damage - When Used by NPCs
-	"npc_damage_near_distance"						"100"
-	"npc_damage_far_distance" 						"1200"
-	"npc_damage_near_value"   						"160"
+	"npc_damage_near_distance"						"125"
+	"npc_damage_far_distance" 						"1000"
+	"npc_damage_near_value"   						"200"
 	"npc_damage_far_value"							"30"
 	"npc_damage_near_value_titanarmor"				"130"
 	"npc_damage_far_value_titanarmor" 				"10"
@@ -356,9 +356,10 @@ WeaponData
 			"viewkick_yaw_base"   							"*0.7"
 			"viewkick_yaw_random" 							"*0.7"
 
-			"damage_near_distance"							"280" // "250"
 			"damage_near_value"   							"240" // "210"
 			"damage_far_value"								"28"
+			"damage_near_distance"							"*0.9" // "250"
+			"damage_far_distance"							"*0.9"
 
 			//"rumble"  									"4"
 			//"tracer_effect"   							"weapon_tracers_pistol"
@@ -380,6 +381,14 @@ WeaponData
 			"spread_air_ads"   								"10"
 			"damage_near_value"   							"/1.1"
 			"damage_far_value"								"/1.1"
+		}
+		"pump_action"
+		{
+			"damage_near_value"								"*1.35"
+			"damage_far_value"								"*1.35"
+			"damage_rodeo"									"*1.35"
+			"fire_rate" 									"3.0"
+			"rechamber_time"								"1.0"
 		}
 		twin_slug
 		{

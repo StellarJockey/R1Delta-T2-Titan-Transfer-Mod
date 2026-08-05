@@ -65,7 +65,7 @@ WeaponData
 	"damage_far_value_titanarmor" 					"200"
 	"damage_rodeo" 									"1000" // 500
 
-	"damage_headshot_scale"							"2.0"
+	"damage_headshot_scale"							"1.6"
 	"damage_torso_scale"							"1.4"
 	"damage_arm_scale"								"1.0"
 	"damage_leg_scale"								"1.0"
@@ -379,6 +379,8 @@ WeaponData
 
 			"damage_near_value"   				"125"
 			"damage_far_value"					"125"
+			"damage_near_distance"				"*0.9"
+			"damage_far_distance"				"*0.9"
 
 			//"rumble"  						"4"
 			"tracer_effect"   					"weapon_tracers_pistol"
@@ -427,7 +429,7 @@ WeaponData
 			"zoom_angle_shift_yaw"							"0"
 			"zoom_fov"										"17.68" //4.5 zoom
 			"is_burn_mod"									"1"
-		}
+		}	
 	}
 
 	CrosshairData

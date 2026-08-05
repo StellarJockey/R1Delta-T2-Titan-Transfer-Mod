@@ -53,9 +53,9 @@ WeaponData
 
 	// Damage - When Used by Players
 	"damage_type" 									"buckshot"
-	"damage_near_distance"							"300"
-	"damage_far_distance" 							"800"
-	"damage_near_value"   							"250"
+	"damage_near_distance"							"380"  // "300"
+	"damage_far_distance" 							"1000" // "700"
+	"damage_near_value"   							"285"  // "130"
 	"damage_far_value"								"35"
 	"damage_falloff_type"							"inverse"
 	"damage_inverse_distance"						"130"
@@ -64,7 +64,7 @@ WeaponData
 	"damage_rodeo" 									"700"
 
 	// Damage - When Used by NPCs
-	"npc_damage_near_distance"						"330"
+	"npc_damage_near_distance"						"350"
 	"npc_damage_far_distance" 						"800"
 	"npc_damage_near_value"   						"250"
 	"npc_damage_far_value"							"35"
@@ -322,9 +322,10 @@ WeaponData
 			"viewkick_yaw_base"   							"*0.7"
 			"viewkick_yaw_random" 							"*0.7"
 
-			"damage_near_distance"							"280" // "250"
 			"damage_near_value"   							"230"
 			"damage_far_value"								"28"
+			"damage_near_distance"							"*0.9"
+			"damage_far_distance"							"*0.9"
 
 			"fire_sound_1_player_1p"						"SG_Twin_B.Fire_Suppressed"
 			"fire_sound_1_player_3p"						"SG_Twin_B.Fire_Suppressed"

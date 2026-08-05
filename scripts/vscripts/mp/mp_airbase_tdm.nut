@@ -494,7 +494,9 @@ function IntroIMCTitanAlavi()
 
 	if ( IsAlive( pilot ) )
 		pilot.Kill()
-
+	AllowTeamRodeo( titan, true )
+	GiveTitanPilot( titan, true )
+	GiveTitanPilotModel( titan, TEAM_IMC_CAPTAIN_MDL  )
 
 	titan.SetTitle( name )
 	waitthread PlayAnim( titan, "at_MP_embark" )
@@ -595,7 +597,9 @@ function IntroIMCTitanGates()
 
 	if ( IsAlive( pilot ) )
 		pilot.Kill()
-
+	AllowTeamRodeo( titan, true )
+	GiveTitanPilot( titan, true )
+	GiveTitanPilotModel( titan, TEAM_IMC_CAPTAIN_MDL  )
 
 	titan.SetTitle( name )
 	titan.SetEfficientMode( false )

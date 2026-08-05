@@ -103,11 +103,13 @@ WeaponData
     "allow_headshots"                                 "1" //"0"
     "headshot_distance"                             "2000"
     "damage_headshot_scale"                         "1.5"
-
-    "reload_time"                                 "3.0"
-    "reload_time_late1"                     "2.4"
-    "reloadempty_time"                        "3.0"
-    "reloadempty_time_late1"            "2.4"
+    
+    "reload_time"                                   "3.0"
+    "reload_time_late1"                             "2.4"
+	"reload_time_late2" 					    	"1.6"
+    "reloadempty_time"                              "3.0"
+    "reloadempty_time_late1"                        "2.4"
+	"reloadempty_time_late2" 				    	"1.6"
 
     // Spread
     "spread_stand_hip"                                  "10"
@@ -301,8 +303,8 @@ WeaponData
 
 		"semi_converter"
 		{
-            "fire_rate"                                      "9"
-            "burst_fire_delay"								 "0.6"
+            "fire_rate"                                      "8"
+            "burst_fire_delay"								 "0.7"
 
             "damage_near_distance"                           "*0.5"
             "damage_far_distance"                            "*0.5"

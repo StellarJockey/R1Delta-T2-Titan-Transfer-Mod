@@ -92,12 +92,14 @@ function PlayerUsedTitanCore( player )
 			endSoulFunc = EndMissileCore
 			break
 		
+		/*
 		case "smart_core":
 			passive = PAS_FUSION_CORE
 			startSoulFunc = StartSmartCore
 			endSoulFunc = EndSmartCore
 			break
-		
+		*/
+
 		case "bullet_storm":
 			passive = PAS_FUSION_CORE
 			startSoulFunc = StartBulletStormCore
@@ -266,8 +268,11 @@ function EndMissileCore( soul )
 
 	if ( titan.GetOffhandWeapon( 0 ) != null )
 		titan.TakeOffhandWeapon( 0 )
+	if ( titan.GetOffhandWeapon( 1 ) != null )
+		titan.TakeOffhandWeapon( 1 )
 
 	thread ReplaceTitanWeapon( titan, ordnance_before_replace, o_mods, "ordnance" )
+	thread ReplaceTitanWeapon( titan, special_before_replace, s_mods, "special" )
 }
 
 function StartMissileCore( soul )
@@ -275,18 +280,35 @@ function StartMissileCore( soul )
 	local titan = soul.GetTitan()
 	RegisterPreviousWeapons( titan )
 	local ordnance = titan.GetOffhandWeapon( 0 )
+	local special = titan.GetOffhandWeapon( 1 )
 	
 	local ordnance_name = ordnance.GetWeaponClassName()
+	local special_name = special.GetWeaponClassName()
+	if ( ordnance_name == "mp_titanweapon_shoulder_turret" )
+	{
+		if( special_name == "mp_titanweapon_salvo_rockets" )
+		{
+			ordnance_name = "mp_titanweapon_shoulder_rockets"
+		}
+		else
+		{
+			ordnance_name = "mp_titanweapon_salvo_rockets"
+		}
+	}
 	//switch( ordnance.GetWeaponClassName() )
 	//{
 		
 	//}
 	if ( titan.GetOffhandWeapon( 0 ) != null )
 		titan.TakeOffhandWeapon( 0 )
+	if ( titan.GetOffhandWeapon( 1 ) != null )
+		titan.TakeOffhandWeapon( 1 )
 
 	thread ReplaceTitanWeapon( titan, ordnance_name, ["dev_mod_low_recharge"], "ordnance" )
+	thread ReplaceTitanWeapon( titan, special_name, ["dev_mod_low_recharge"], "special" )
 }//why tf did i make missile core again?
 
+/*
 function EndSmartCore( soul )
 {
 	local titan = soul.GetTitan()
@@ -315,6 +337,7 @@ function StartSmartCore( soul )//do i use minigun....do i use XO16? do i use... 
 	//titan.GiveWeapon( "mp_weapon_mega3", ["smart_core"] )//super smort
 	//shit, i got a calculating bitfield error, hol on. the _passives_shared doesnt include gun passives though..., not so smort now ;-;
 }
+*/
 
 function EndBulletStormCore( soul )
 {

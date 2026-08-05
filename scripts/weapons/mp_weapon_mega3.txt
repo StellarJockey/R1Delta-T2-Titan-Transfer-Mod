@@ -113,10 +113,10 @@ WeaponData
 
 
 	// Charge Behavior
-	"charge_time" 						 		"0.5" //	"0.01"
+	"charge_time" 						 			"0.5" //	"0.01"
 	"charge_cooldown_time"							"3.5"
 	"charge_cooldown_delay"   						"0.1"
-	"charge_end_forces_fire"						 "0"
+	"charge_end_forces_fire"						 "1"
 
 	// Spread //tfo-556
 	"spread_stand_hip"								"1" //"4"

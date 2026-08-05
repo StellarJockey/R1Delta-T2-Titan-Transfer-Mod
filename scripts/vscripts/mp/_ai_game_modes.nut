@@ -1,5 +1,5 @@
 //=========================================================
-// MP ai functions for game modes
+// MP ai functions for game modes TTT
 //
 //=========================================================
 
@@ -44,8 +44,6 @@ function main()
 	Globalize( Coop_OnPlayerOrNPCKilled )
 	Globalize( SquadAssaultFrontline )
 	Globalize( SquadAssault )
-	Globalize( SquadHardpointRunThink )
-	Globalize( GetHardpointObjectiveForTeam )
 	Globalize( SquadFlagRunThink )
 	Globalize( GetCTFFlagOriginForTeam )
 	Globalize( GetCTFObjectiveForTeam )
@@ -86,6 +84,7 @@ function main()
 	Globalize( SetLevelAICount )
 
 	FlagInit( "FrontlineInitiated" )
+	FlagInit( "IntroMilitiaNPCsSpawned" )
 	RegisterSignal( "FreeAISlotsUpdated" )
 	RegisterSignal( "TitanHotDropComplete" )
 	RegisterSignal( "DisableRocketPods" )
@@ -106,6 +105,12 @@ function main()
 
 	level.max_npc_per_side <- 28
 	level.max_npc_per_side_small <- 24
+
+	// NEW: Initialize AI behavior system (works for all game modes)
+	level.aiSpottingEnabled <- true  // Can be disabled per-mode
+	level.aiHuntThinkEnabled <- true
+	level.aiSpottedPlayers <- {}    // Global spotted player tracking
+	level.hardpointAssignments <- {}
 
 	level.occupiedAISlots <- {}
 	level.occupiedAISlots[TEAM_IMC] <- 0
@@ -137,15 +142,19 @@ function main()
 			level.npcRespawnWait = 5
 			break
 		case ATTRITION:
+		case CAPTURE_POINT:
 			level.npcRespawnWait = 10
 			break
 		case LAST_TITAN_STANDING:
 		case WINGMAN_LAST_TITAN_STANDING:
+		case TITAN_MFD:
+		case TITAN_MFD_PRO:
 			level.npcRespawnWait = 5
 			npcPerSide = GetCPULevelWrapper() == CPU_LEVEL_HIGHEND ? level.max_npc_per_side : 9
 			break
 		case CAPTURE_THE_FLAG:
-			level.npcRespawnWait = 5
+		case CAPTURE_THE_FLAG_PRO:
+			level.npcRespawnWait = 10
 			npcPerSide = 18
 			break
 	}
@@ -330,6 +339,7 @@ function GiveTitanPilot( titan, trueorfalse )
 	}
 	file.pilotedtitans = pilotedtitans
 }
+Globalize( GiveTitanPilot )
 
 function SetNPCAsPilot( pilot, trueorfalse )
 {
@@ -366,6 +376,7 @@ function GiveTitanPilotModel( titan, model )
 {
 	file.pilotedtitanmodels[ titan ] <- model
 }
+Globalize( GiveTitanPilotModel )
 
 function NPCPilotEmbarkTitan( pilot, title, titan )
 {
@@ -423,6 +434,7 @@ function NPCPilotEmbarkTitan( pilot, title, titan )
 	EmitSoundOnEntity( titan, Audio )
 	waitthread PlayAnimGravity( titan, animation )
 	SetStanceStand( titan.GetTitanSoul() )
+	DecayNPCDomeShield( titan, 0.0 )
 	GiveTitanPilot( titan, true )
 	GiveTitanPilotModel( titan, pilotmodel )
 	if ( IsValid( pilot ) )
@@ -525,7 +537,6 @@ function SetupLevelAICount()
 		case "mp_corporate":
 		case "mp_nexus":
 		case "mp_rise":
-		case "mp_fracture":
 		case "mp_o2":
 		case "mp_training_ground":
 		case "mp_swampland":
@@ -536,6 +547,12 @@ function SetupLevelAICount()
 		case "mp_haven":
 		case "mp_nest2":
 		case "mp_mia":
+			break
+
+		// Start with default, that way one of the extra drop pods doesn't land on Captain Dunnam in the MCOR intro
+		case "mp_fracture":
+			aiCount = 12
+			thread RestoreAICount()
 			break
 
 		case "mp_angel_city":
@@ -563,6 +580,16 @@ function SetupLevelAICount()
 
 	SetLevelAICount( aiCount, TEAM_MILITIA )
 	SetLevelAICount( aiCount, TEAM_IMC )
+}
+
+function RestoreAICount() // FOR FRACTURE
+{
+	FlagWait( "GamePlaying" )
+
+	wait 15.0
+
+	SetLevelAICount( 28, TEAM_MILITIA )
+	SetLevelAICount( 28, TEAM_IMC )
 }
 
 function GetMaxAICount( team )
@@ -867,65 +894,53 @@ function Spawn_TrackedPilotWithTitan( team, spawnPoint )
 
 function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 {
-	local titanDataTable = GetRandomTitanLoadout()
-	local titans = Random([ "titan_stryder", "titan_atlas", "titan_ogre" ])
-	titanDataTable.setFile = titans
-	local settings = titanDataTable.setFile
-	titanDataTable.primary = Random([
-		"mp_titanweapon_arc_cannon",
-		"mp_titanweapon_rocket_launcher",
-		"mp_titanweapon_40mm",
-		"mp_titanweapon_sniper",
-		"mp_titanweapon_triple_threat",
-		"mp_titanweapon_xo16",
-		"mp_titanweapon_shotgun",
-		// "mp_weapon_mega3",
-	])
+    local isTitanBrawl = ( GameRules.GetGameMode() == TITAN_BRAWL )
+    local pilot = null
+    local title = ""
 
 	local pilotmodels = file.pilotmodels
-	if ( team == TEAM_MILITIA )
-	    pilotmodels = file.militiapilotmodels
-	else if ( team == TEAM_IMC )
-	    pilotmodels = file.imcpilotmodels
+    if ( team == TEAM_MILITIA )
+        pilotmodels = file.militiapilotmodels
+    else if ( team == TEAM_IMC )
+        pilotmodels = file.imcpilotmodels
 
-	local pilot = CreateEntity( "npc_soldier" )
-	DispatchSpawn( pilot )
-	pilot.SetOrigin( spawnOrigin )
-	pilot.SetTeam( team )
-	pilot.SetModel( Random( pilotmodels ) )
-	SetNPCAsPilot( pilot, true )
-	GiveMinionWeapon( pilot, "mp_weapon_rspn101" )
-	pilot.SetMaxHealth( 200 )
-	pilot.SetHealth( 200 )
+    // PILOT SETUP (obvisouly skips in Titan Brawl)
+    if ( !isTitanBrawl )
+    {
+        pilot = CreateEntity( "npc_soldier" )
+        DispatchSpawn( pilot )
+        pilot.SetOrigin( spawnOrigin )
+        pilot.SetTeam( team )
+        pilot.SetModel( Random( pilotmodels ) )
+        SetNPCAsPilot( pilot, true )
+        GiveMinionWeapon( pilot, "mp_weapon_rspn101" )
+        pilot.SetMaxHealth( 200 )
+        pilot.SetHealth( 200 )
 
-	local title = ""
-    
-    // Custom logic for varied Pilot names based on Team
-    if ( team == TEAM_IMC )
-    {
-        local imcCodeNames = [
-            "Alpha", "Bravo", "Charlie", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo",
-            "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo", "Sierra", "Tango", "Uniform",
-            "Victor", "Whiskey", "Xray", "Yankee", "Zulu", "Steel", "Raven", "Falcon", "Silver", "Roach",
-			"Io", "Ganymede", "Callisto", "Europa",
-        ]
-        title = "Pilot " + Random( imcCodeNames )
-    }
-    else if ( team == TEAM_MILITIA )
-    {
-        local militiaNames = [
-            "Jackson", "Rodriguez", "Williams", "Wilson", "Moore", "Anderson", "White", "Lewis", "Clark", "Walker",
-            "Baker", "Young", "Turner", "Carter", "Evans", "Hill", "Hawkins", "Campbell", "Hanes", "Stokes",
-            "Bohr", "Allen", "Turing", "Phillips", "Feynman", "Frey", "Wilkes", "Shaver", "Freeborn", "Gundyr",
-			"Barnes", "Hernandez", "Greene",
-        ]
-        title = "Pilot " + Random( militiaNames )
+        if ( team == TEAM_IMC || team == TEAM_MILITIA )
+        {
+            title = GetRandomPilotName( team )
+        }
+
+        thread Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
+        
+        wait 2.5 
     }
 
-    // This title is then passed to the spawn function
-    thread Spawn_PilotInDroppod( pilot, title, team, spawnPoint )
-
-	wait 2.5
+    // TITAN CREATION
+    local titanDataTable = GetRandomTitanLoadout()
+    local titans = Random([ "titan_stryder", "titan_atlas", "titan_ogre", "titan_ion", "titan_legion", "titan_scorch", "titan_northstar", "titan_ronin", ])
+    titanDataTable.setFile = titans
+    local settings = titanDataTable.setFile
+    titanDataTable.primary = Random([
+        "mp_titanweapon_arc_cannon",
+        "mp_titanweapon_rocket_launcher",
+        "mp_titanweapon_40mm",
+        "mp_titanweapon_sniper",
+        "mp_titanweapon_triple_threat",
+        "mp_titanweapon_xo16",
+        "mp_titanweapon_shotgun",
+    ])
 	local titan = CreateNPCTitanFromSettings( settings, team, spawnOrigin, spawnAngles )
 	
 	if ( !("nukeTitanDamagesOtherTitans" in titan.s) )
@@ -939,65 +954,124 @@ function CreateTitanForTeam( team, spawnPoint, spawnOrigin, spawnAngles )
 	}
 
 	if ( titans == "titan_stryder" )
-	titan.SetTitle( "#CHASSIS_STRYDER_NAME" )
+		titan.SetTitle( "#CHASSIS_STRYDER_NAME" )
 	else if ( titans == "titan_atlas" )
-	titan.SetTitle( "#CHASSIS_ATLAS_NAME" )
+		titan.SetTitle( "#CHASSIS_ATLAS_NAME" )
 	else if ( titans == "titan_ogre" )
-	titan.SetTitle( "#CHASSIS_OGRE_NAME" )
+		titan.SetTitle( "#CHASSIS_OGRE_NAME" )
+
+	else if ( titans == "titan_ronin" )
+		titan.SetTitle( "Ronin" )
+	else if ( titans == "titan_ion" )
+		titan.SetTitle( "Ion" )
+	else if ( titans == "titan_scorch" )
+		titan.SetTitle( "Scorch" )
+	else if ( titans == "titan_northstar" )
+		titan.SetTitle( "Northstar" )
+	else if ( titans == "titan_legion" )
+		titan.SetTitle( "Legion" )
 	
-	local weaponMods = []
-	local weaponModPools = {
-		mp_titanweapon_40mm            = [ "burst", "extended_ammo", ],                 // "burn_mod_titan_40mm"
-		mp_titanweapon_xo16            = [ "extended_ammo", "burst", "accelerator", ],  // "burn_mod_titan_xo16"
-		mp_titanweapon_sniper          = [ "extended_ammo", ],
-		mp_titanweapon_arc_cannon      = [ null, "capacitor", "burn_mod_titan_arc_cannon", ],  
-		mp_titanweapon_rocket_launcher = [ "rapid_fire_missiles", "extended_ammo", ],   // "burn_mod_titan_rocket_launcher"
-		mp_titanweapon_triple_threat   = [ "mine_field", "extended_ammo", ],            // "burn_mod_titan_triple_threat"
-		mp_titanweapon_shotgun         = [ "extended_ammo", "semi_converter", ],
-	}
+    local weaponMods = []
+    local weaponModPools = {
+        mp_titanweapon_40mm            = [ null, null, "burst", "burst", "extended_ammo", "extended_ammo", "burn_mod_titan_40mm", ],
+        mp_titanweapon_xo16            = [ null, null, "extended_ammo", "extended_ammo", "burst", "burst", "accelerator", "accelerator", "burn_mod_titan_xo16", ],
+        mp_titanweapon_sniper          = [ null, "extended_ammo", ],
+        mp_titanweapon_arc_cannon      = [ null, null, "capacitor", "capacitor", "burn_mod_titan_arc_cannon", ],  
+        mp_titanweapon_rocket_launcher = [ null, null, "rapid_fire_missiles", "rapid_fire_missiles", "extended_ammo", "extended_ammo", "burn_mod_titan_rocket_launcher", ],
+        mp_titanweapon_triple_threat   = [ null, null, "mine_field", "mine_field", "extended_ammo", "extended_ammo", "burn_mod_titan_triple_threat", ],
+        mp_titanweapon_shotgun         = [ null, "extended_ammo", "semi_converter", ],
+    }
 
-	local primaryWeapon = titanDataTable.primary
-	if ( primaryWeapon in weaponModPools )
-	{
-		local availableMods = weaponModPools[primaryWeapon]
-		local roll = RandomInt( 0, availableMods.len() - 1 )
-		local selectedMod = availableMods[roll]
+    local primaryWeapon = titanDataTable.primary
+    if ( primaryWeapon in weaponModPools )
+    {
+        local availableMods = weaponModPools[primaryWeapon]
+        local selectedMod = Random( availableMods ) 
 
-		if ( selectedMod != null )
-		{
-			weaponMods.append( selectedMod )
-		}
-	}
+        if ( selectedMod != null )
+        {
+            weaponMods.append( selectedMod )
+        }
+    }
 
-	titan.GiveWeapon( titanDataTable.primary, weaponMods )
-    titan.TakeOffhandWeapon( 0 )
+	if ( isTitanBrawl )
+    {
+        GiveTitanPilot( titan, true )
+        GiveTitanPilotModel( titan, Random( pilotmodels ) )
+        titan.SetEfficientMode( false )
+    }
+
+    titan.GiveWeapon( titanDataTable.primary, weaponMods )
+	titan.TakeOffhandWeapon( 0 )
     titan.TakeOffhandWeapon( 1 )
-	titan.SetLookDist( 120000 )
-	titan.kv.faceEnemyWhileMovingDistSq = 1024 * 1024
-	
-	AttritionGiveTitanRandomTacticalAbility( titan )
-	GiveTitanRandomShoulderWeapon( titan )
-	AllowTeamRodeo( titan, true )
-	thread TrackTitan( titan )
-	waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
-	thread PlayAnim( titan, "at_MP_embark_idle_blended" )
-	if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
-	{
-		pilot.SetOrigin( titan.GetOrigin() )
-		pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
-	    pilot.EnableBehavior( "Follow" )
-		pilot.DisableBehavior( "Assault" )
-	    thread NPCPilotEmbarkTitan( pilot, title, titan )
-		thread TitanStandUpHandle( pilot, titan )
-		return
-	}
+    titan.SetLookDist( 120000 )
+    titan.kv.faceEnemyWhileMovingDistSq = 1024 * 1024
+
+    GiveTitanRandomShoulderWeapon( titan )
+    AllowTeamRodeo( titan, true )
+
+	local tacChoice = RandomInt( 3 )
+    if ( tacChoice == 0 )
+    {
+        titan.GiveOffhandWeapon( "mp_titanability_bubble_shield", TAC_ABILITY_WALL, [] )
+        titan.SetTacticalAbility( titan.GetOffhandWeapon( TAC_ABILITY_WALL ), TTA_WALL )
+    }
+    else if ( tacChoice == 1 )
+    {
+        titan.GiveOffhandWeapon( "mp_titanability_smoke", TAC_ABILITY_SMOKE, [] )
+        titan.SetTacticalAbility( titan.GetOffhandWeapon( TAC_ABILITY_SMOKE ), TTA_SMOKE )
+    }
+    else
+    {
+        titan.SetTacticalAbility( titan.GetOffhandWeapon( TAC_ABILITY_VORTEX ), TTA_VORTEX )
+    }
+   
+    // DROP SEQUENCE LOGIC
+    thread TrackTitan( titan )
+    waitthread SuperHotDropGenericTitan_DropIn( titan, spawnOrigin, spawnAngles )
+
+    if ( isTitanBrawl )
+    {
+        thread DecayNPCDomeShield( titan, 3.0 )
+		waitthread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
+        SetStanceStand( titan.GetTitanSoul() )
+
+        if ( level.aiHuntThinkEnabled )
+        {
+            thread AI_HuntThink( titan, team )
+            thread AI_SpottingThink( titan, team )
+        }
+
+        return titan
+    }
+
+    // Standard Modes Finish
+    thread PlayAnim( titan, "at_MP_embark_idle_blended" )
+    if ( IsValid( pilot ) && IsValid( titan ) && IsAlive( pilot ) && IsAlive( titan ) )
+    {
+        pilot.SetOrigin( titan.GetOrigin() )
+        pilot.InitFollowBehavior( titan, AIF_FIRETEAM )
+        pilot.EnableBehavior( "Follow" )
+        pilot.DisableBehavior( "Assault" )
+        thread NPCPilotEmbarkTitan( pilot, title, titan )
+        thread TitanStandUpHandle( pilot, titan )
+        return
+    }
 	else if ( IsValid( titan ) && IsAlive( titan ) )
-	    thread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
+    {
+        // The pilot is dead, so the Titan stands up on its own
+        waitthread PlayAnimGravity( titan, "at_hotdrop_quickstand" )
+        SetStanceStand( titan.GetTitanSoul() )
+        
+        // Shield decays instantly
+        DecayNPCDomeShield( titan, 0.0 )
+    }
 
-	return
-
-	thread TitanBrawlAuto_HuntThink( titan, entry )
-	thread TitanBrawlAuto_SpottingThink( titan, entry )
+    if ( level.aiHuntThinkEnabled )
+    {
+        thread AI_HuntThink( titan, team )
+        thread AI_SpottingThink( titan, team )
+    }
 }
 
 function TitanStandUpHandle( pilot, titan )
@@ -1015,50 +1089,6 @@ function TitanStandUpHandle( pilot, titan )
 	)
 	WaitForever()
 }
-
-function AttritionGiveTitanRandomTacticalAbility( titan )
-{
-	AttritionGiveTitanTacticalAbility( titan, RandomInt( 1, 4 ) )
-}
-
-function AttritionGiveTitanTacticalAbility( titan, tacAbility )
-{
-	local tac = titan.GetOffhandWeapon( tacAbility )
-	switch ( tacAbility )
-	{
-		case 1:
-			if ( !IsValid( tac ) )
-				titan.GiveOffhandWeapon( "mp_titanability_bubble_shield", 2 )
-			titan.SetTacticalAbility( titan.GetOffhandWeapon( 2 ), TTA_WALL )
-			break
-
-		case 2:
-			if ( !IsValid( tac ) )
-				titan.GiveOffhandWeapon( "mp_titanability_smoke", 3 )
-			titan.SetTacticalAbility( titan.GetOffhandWeapon( 3 ), TTA_SMOKE )
-			break
-
-		default:
-			if ( !IsValid( tac ) )
-				titan.GiveOffhandWeapon( "mp_titanweapon_vortex_shield", 1 )
-			titan.SetTacticalAbility( titan.GetOffhandWeapon( 1 ), TTA_VORTEX )
-			break
-	}
-}
-
-function GiveTitanRandomShoulderWeapon( titan )
-{
-	local weapons = [
-		"mp_titanweapon_salvo_rockets",
-		"mp_titanweapon_dumbfire_rockets",
-		"mp_titanweapon_shoulder_rockets",
-		"mp_titanweapon_homing_rockets",
-		]
-
-	GiveTitanShoulderWeapon( titan, Random( weapons ) )
-}
-
-//////////////////////////////
 
 function GiveTitanRandomShoulderWeapon( titan )
 {
@@ -1938,6 +1968,10 @@ function SpawnFrontlineSquad( team, numFreeSlots )
 			printt( "[CTF_AI] SpawnFrontlineSquad dispatching squadIndex", squadIndex, "to AssaultCTF for team", team )
 		AssaultCTF( npcArray, squadIndex )
 	}
+	else if ( GameRules.GetGameMode() == CAPTURE_POINT )
+	{
+		thread SquadHardpointRunThink( npcArray, squadIndex )
+	}
 	else
 	{
 		// make the squad assault the correct frontline
@@ -2066,14 +2100,9 @@ function SniperSpectreWaveThink( team )
 function Spawn_TrackedPilotWithTitan_Delayed( team, spawnPoint )
 {
 	local mode = GameRules.GetGameMode()
-    if ( mode == TITAN_BRAWL || mode == LAST_TITAN_STANDING )
+    if ( mode != TITAN_BRAWL && mode != LAST_TITAN_STANDING )
     {
-        wait 0.0  // Titans spawn instantly in Titan Brawl and LTS
-    }
-
-    else
-    {
-        wait RandomFloat( 20, 90 )   // Titan spawn delay in seconds 
+        wait RandomFloat( 20, 90 )   // Titan spawn delay in seconds
     } 
 
     if ( !IsNPCSpawningEnabled( team ) )
@@ -2396,8 +2425,12 @@ function GameModeRemoveFrontline( entArray )
 	switch ( gameMode )
 	{
 		case CAPTURE_THE_FLAG:
+		case CAPTURE_THE_FLAG_PRO:
 		case LAST_TITAN_STANDING:
 		case WINGMAN_LAST_TITAN_STANDING:
+		case TITAN_BRAWL:
+		case TITAN_MFD:
+		case TITAN_MFD_PRO:
 			break
 		default:
 			keepUndefined = true
@@ -2606,7 +2639,8 @@ function CheckFrontlineOverrun( losingTeam )
 //////////////////////////////////////////////////////////
 function MoveFrontline( winningTeam )
 {
-	if ( GameRules.GetGameMode() == CAPTURE_THE_FLAG )
+	local gamemode = GameRules.GetGameMode()
+	if ( gamemode == CAPTURE_THE_FLAG || gamemode == CAPTURE_THE_FLAG_PRO )
 		return
 
 	local prevFrontlineName = file.currentFrontline.name
@@ -2830,8 +2864,16 @@ function CreateTempFrontline()
 	printt( "************************************" )
 
 	local spawnpoints = SpawnPoints_GetPilotStart( TEAM_ANY )
-	if ( GameRules.GetGameMode() == LAST_TITAN_STANDING || GameRules.GetGameMode() == WINGMAN_LAST_TITAN_STANDING )
-		spawnpoints = SpawnPoints_GetTitanStart( TEAM_ANY )
+	switch( GameRules.GetGameMode() )
+	{
+		case LAST_TITAN_STANDING:
+		case WINGMAN_LAST_TITAN_STANDING:
+		case TITAN_BRAWL:
+		case TITAN_MFD:
+		case TITAN_MFD_PRO:
+			spawnpoints = SpawnPoints_GetTitanStart( TEAM_ANY )
+			break
+	}
 
 	if ( spawnpoints.len() == 0 )
 		return []
@@ -3068,6 +3110,10 @@ function FrontlineDeath( ent, damageInfo )
 	}
 
 	local team = ent.GetTeam()
+
+	if ( team == TEAM_BOTH )
+		return
+
 	CheckFrontlineOverrun( team )
 }
 
@@ -3672,8 +3718,6 @@ function MoveBot( team )
 }
 
 
-
-
 function EntitiesDidLoad()
 {
 	switch( GameRules.GetGameMode() )
@@ -3709,16 +3753,33 @@ function ScriptedSquadAssault( squad, index )
 }
 
 
-//==================================
-// FO AI HARDPOINT LOGIC
-//==================================
 function AssaultHP( guys, index )
 {
 	if ( !guys.len() )
 		return
 
-	local team = guys[ 0 ].GetTeam()
-	local squadName = MakeSquadName( team, index )
+	//give everyone proper squad name
+	local team 			= guys[ 0 ].GetTeam()
+	local startPoint 	= null
+
+	// find a rough start location for the team
+	local spawnpoints = GetEntArrayByClass_Expensive( "info_spawnpoint_titan_start" )
+	local startOrigin = Vector( 0, 0, 0 )
+	local count = 0
+	for( local i = 0; i < spawnpoints.len(); i++ )
+	{
+		if ( spawnpoints[ i ].GetTeam() == team )
+		{
+			startOrigin += spawnpoints[ i ].GetOrigin()
+			count++
+		}
+	}
+
+	startOrigin = startOrigin * ( 1.0 / count.tofloat() )
+
+	local hardpoints 	= ArrayFarthest( GetHardpoints(), startOrigin )
+	local hpIndex 		= GetHardpointIndex( hardpoints[ index ] )
+	local squadName 	= MakeSquadName( team, hpIndex )
 
 	foreach ( guy in guys )
 	{
@@ -3726,155 +3787,16 @@ function AssaultHP( guys, index )
 			SetSquad( guy, squadName )
 	}
 
+	//is our squad filled up yet?
 	local squad = GetNPCArrayBySquad( squadName )
 
 	if ( squad.len() > SQUADSIZE )
 		return
 
-	// Create a 2:1 Attacker/Defender bias based on the squad's index
-	local role = ( index < 2 ) ? "attack" : "defend"
-
-	// Route to the dynamic think loop instead of a static order
-	thread SquadHardpointRunThink( squadName, team, role )
+	//ok we got everyone - lets assault some shit
+	thread SquadCapturePointThink( squadName, hardpoints[ index ], team )
 }
 
-function SquadHardpointRunThink( squadName, team, role )
-{
-	local signalString = "SquadHardpointRunThink_" + squadName
-
-	level.ent.Signal( signalString )
-	level.ent.EndSignal( signalString )
-
-	if ( !GetNPCSquadSize( squadName ) )
-		return
-
-	local lastGoal = null
-
-	while ( true )
-	{
-		local squad = GetNPCArrayBySquad( squadName )
-		ArrayRemoveDead( squad )
-
-		if ( !squad.len() )
-			return
-
-		// GET THE SQUAD'S CURRENT LOCATION
-		// Use the first living member's origin as the reference point
-		local squadOrigin = squad[0].GetOrigin()
-
-		// Pass the origin into the new objective function
-		local targetHardpoint = GetHardpointObjectiveForTeam( team, role, squadOrigin )
-
-		if ( targetHardpoint != null )
-		{
-			// Only issue a new assault order if their objective actually changed
-			if ( lastGoal == null || targetHardpoint != lastGoal )
-			{
-				NPCsAssaultHardpoint( squad, targetHardpoint )
-				lastGoal = targetHardpoint
-			}
-		}
-
-		// Wait 3 seconds before re-evaluating the map state
-		wait 3.0
-	}
-}
-
-
-function GetHardpointObjectiveForTeam( team, role, squadOrigin )
-{
-	if ( !( "hardpoints" in level ) || level.hardpoints.len() == 0 )
-		return null
-
-	local ownedPoints = []
-	local neutralPoints = []
-	local enemyPoints = []
-
-	local emergencyPoint = null
-	local closestEmergencyDist = 99999999
-
-	// Categorize all hardpoints on the map and calculate distance to the squad
-	foreach ( hp in level.hardpoints )
-	{
-		local hpTeam = hp.GetTeam()
-		local hpState = hp.GetHardpointState()
-		local dist = Distance( squadOrigin, hp.GetOrigin() )
-
-		// EMERGENCY CHECK: Is our owned point currently being contested or captured by the enemy?
-		if ( hpTeam == team && ( hpState == CAPTURE_POINT_STATE_HALTED || hpState == CAPTURE_POINT_STATE_CAPPING ) )
-		{
-			if ( dist < closestEmergencyDist )
-			{
-				closestEmergencyDist = dist
-				emergencyPoint = hp
-			}
-		}
-
-		// Store the hardpoint and its distance in a table for sorting later
-		local hpData = { point = hp, distance = dist }
-
-		if ( hpTeam == team )
-			ownedPoints.append( hpData )
-		else if ( hpTeam == TEAM_UNASSIGNED )
-			neutralPoints.append( hpData )
-		else
-			enemyPoints.append( hpData )
-	}
-
-	// ---------------------------------------------------------
-	// DEFENDER LOGIC
-	// ---------------------------------------------------------
-	if ( role == "defend" )
-	{
-		// 1. Defend the closest emergency point immediately
-		if ( emergencyPoint != null )
-			return emergencyPoint
-			
-		// 2. Otherwise, garrison the closest owned point
-		if ( ownedPoints.len() > 0 )
-		{
-			ownedPoints.sort( SortByDistance )
-			return ownedPoints[0].point 
-		}
-	}
-
-	// ---------------------------------------------------------
-	// ATTACKER LOGIC
-	// ---------------------------------------------------------
-	// 1. Prioritize the closest Neutral points first for early leads
-	if ( neutralPoints.len() > 0 )
-	{
-		neutralPoints.sort( SortByDistance )
-		return neutralPoints[0].point
-	}
-
-	// 2. If no Neutral points, push the closest Enemy point
-	if ( enemyPoints.len() > 0 )
-	{
-		enemyPoints.sort( SortByDistance )
-		return enemyPoints[0].point
-	}
-
-	// ---------------------------------------------------------
-	// FALLBACK LOGIC
-	// ---------------------------------------------------------
-	// If we own all 3 points, even attackers must fall back to defend the closest point
-	if ( ownedPoints.len() > 0 )
-	{
-		ownedPoints.sort( SortByDistance )
-		return ownedPoints[0].point
-	}
-
-	return level.hardpoints[0]
-}
-
-// Helper function to sort tables by the "distance" key
-function SortByDistance( a, b ) 
-{
-	if ( a.distance > b.distance ) return 1
-	if ( a.distance < b.distance ) return -1
-	return 0
-}
 
 function AssaultTDM( guys, index )
 {
@@ -4573,158 +4495,200 @@ function AutoTitan_CanDoRangeCheck( autoTitan )
 }
 
 
-//////////////////////////
+//=========================================================
 // Ripped this stuff down here from Auto Titan Brawl to make the Titans more aggressive
 // ...Look man, don't ask questions. It just works
+//=========================================================
 
-
-function TitanBrawlAuto_HuntThink( titan, entry )
+function AI_SpottingThink( titan, team = null )
 {
-    titan.EndSignal( "OnDeath" )
-    titan.EndSignal( "OnDestroy" )
+	// Unified spotting logic that works for any NPC Titan
+	titan.EndSignal( "OnDeath" )
+	titan.EndSignal( "OnDestroy" )
 
-    local lastValidTargetTime = Time()
-    local lastPosition = titan.GetOrigin()
-    local lastPositionCheckTime = Time()
-    local stuckThreshold = 2.0  // If titan hasn't moved in 2 seconds, it's stuck
-    local minMovementDistance = 100.0  // Minimum distance to consider "moved"
+	local titanTeam = team != null ? team : titan.GetTeam()
+	if ( !("aiSpottedPlayers" in level) )
+		level.aiSpottedPlayers <- {}
+	
+	if ( !(titanTeam in level.aiSpottedPlayers) )
+		level.aiSpottedPlayers[titanTeam] <- {}
 
-    while ( true )
-    {
-        // Check if titan is stuck (hasn't moved significantly)
-        local currentTime = Time()
-        local currentPosition = titan.GetOrigin()
-        local timeSinceLastCheck = currentTime - lastPositionCheckTime
-
-        if ( timeSinceLastCheck >= stuckThreshold )
-        {
-            local distanceMoved = Distance( currentPosition, lastPosition )
-
-            if ( distanceMoved < minMovementDistance )
-            {
-                // Titan is stuck! Force it to find a new location
-                printt("[AutoTitan]", entry.name, "is stuck, forcing new target")
-                TitanBrawlAuto_SendToRandomLocation( titan, entry )
-                lastValidTargetTime = currentTime
-            }
-
-            lastPosition = currentPosition
-            lastPositionCheckTime = currentTime
-        }
-
-        local target = TitanBrawlAuto_SelectTarget( titan, entry )
-        if ( IsValid( target ) )
-        {
-			printt("TARGET:" + target)
-            titan.SetEnemy( target )
-            SendAIToAssaultPoint( titan, target.GetOrigin(), null, 256 )
-            lastValidTargetTime = currentTime
-        }
-        else
-        {
-            // No valid target - make titan roam to prevent standing still
-            local timeSinceLastTarget = currentTime - lastValidTargetTime
-            if ( timeSinceLastTarget >= 1.0 )
-            {
-                TitanBrawlAuto_SendToRandomLocation( titan, entry )
-                lastValidTargetTime = currentTime
-            }
-        }
-        wait RandomFloat( 1.5, 3.0 )
-    }
-}
-
-function TitanBrawlAuto_SendToRandomLocation( titan, entry )
-{
-    // Try to find a random assault point or spawn point to patrol to
-    local enemyTeam = GetOtherTeam( entry.team )
-    local assaultPoints = GetEntArrayByClass_Expensive( "info_frontline" )
-
-    if ( assaultPoints.len() > 0 )
-    {
-        local randomPoint = assaultPoints[ RandomInt( assaultPoints.len() ) ]
-        SendAIToAssaultPoint( titan, randomPoint.GetOrigin(), null, 512 )
-        return
-    }
-
-    // Fallback: move toward enemy spawn
-    local enemySpawns = SpawnPoints_GetTitanStart( enemyTeam )
-    if ( enemySpawns.len() > 0 )
-    {
-        local randomSpawn = enemySpawns[ RandomInt( enemySpawns.len() ) ]
-        SendAIToAssaultPoint( titan, randomSpawn.GetOrigin(), null, 512 )
-        return
-    }
-
-    // Last resort: move in a random direction
-    local currentPos = titan.GetOrigin()
-    local randomOffset = Vector( RandomFloat( -1000, 1000 ), RandomFloat( -1000, 1000 ), 0 )
-    local newPos = currentPos + randomOffset
-    SendAIToAssaultPoint( titan, newPos, null, 256 )
-}
-
-function TitanBrawlAuto_SelectTarget( titan, entry )
-{
-    local enemyTeam = GetOtherTeam( entry.team )
-    local origin = titan.GetOrigin()
-    
-    // Priority 1: Players (only spotted ones) and ALL Titans
-    local highPriority = []
-    
-    // Add spotted players only
-    local enemyPlayers = GetPlayerArrayOfTeam( enemyTeam )
-    foreach ( player in enemyPlayers )
-    {
-        if ( player in entry.spottedPlayers )
-            highPriority.append( player )
-    }
-    
-    // Add ALL enemy titans (always valid targets)
-    highPriority.extend( GetNPCArrayEx( "npc_titan", enemyTeam, origin, -1 ) )
-    
-	foreach ( otherEntry in level.autoTitanData[ enemyTeam ] )
+	while ( true )
 	{
-		if ( !(otherEntry.titan in highPriority) )
-			highPriority.append(otherEntry.titan)
+		local enemyTeam = GetOtherTeam( titanTeam )
+		local enemyPlayers = GetPlayerArrayOfTeam( enemyTeam )
+		
+		foreach ( player in enemyPlayers )
+		{
+			if ( !IsValid( player ) || !IsAlive( player ) )
+				continue
+			
+			// Skip if already spotted by this team
+			if ( player in level.aiSpottedPlayers[titanTeam] )
+				continue
+			
+			// Check if titan is facing the player
+			local toPlayer = player.GetOrigin() - titan.GetOrigin()
+			toPlayer.Norm()
+			local facing = titan.GetForwardVector()
+			local dot = facing.Dot( toPlayer )
+			
+			// Within ~90 degree cone
+			if ( dot > 0.0 )
+			{
+				// Check line of sight
+				local traceResult = TraceLine( titan.EyePosition(), player.EyePosition(), [titan], TRACE_MASK_SHOT, TRACE_COLLISION_GROUP_NONE )
+				
+				if ( traceResult.fraction >= 0.99 || traceResult.hitEnt == player )
+				{
+					// Player spotted globally
+					level.aiSpottedPlayers[titanTeam][player] <- true
+					if ( file.debug & DEBUG_NPC_FRONTLINE )
+						printt( "[AI] Titan spotted enemy:", player.GetPlayerName() )
+				}
+			}
+		}
+		
+		wait 0.5  // Check twice per second
 	}
-    
-    // Check high priority targets first
-    local best = TitanBrawlAuto_FindClosestValid( highPriority, origin )
-    if ( best != null )
-        return best
-    
-    // Priority 2: Low priority NPCs (soldiers/spectres)
-    local lowPriority = []
-    lowPriority.extend( GetNPCArrayEx( "npc_soldier", enemyTeam, origin, -1 ) )
-    lowPriority.extend( GetNPCArrayEx( "npc_spectre", enemyTeam, origin, -1 ) )
-    
-    return TitanBrawlAuto_FindClosestValid( lowPriority, origin )
 }
 
-function TitanBrawlAuto_FindClosestValid( candidates, origin )
+function AI_HuntThink( titan, team = null )
 {
-    local closest = null
-    local closestDist = 999999
+	// Unified hunt logic that prioritizes spotted players and enemies
+	titan.EndSignal( "OnDeath" )
+	titan.EndSignal( "OnDestroy" )
 
-    foreach ( candidate in candidates )
-    {
-        if ( !IsValid(candidate) )
-            continue
+	local titanTeam = team != null ? team : titan.GetTeam()
+	local lastValidTargetTime = Time()
+	local lastPosition = titan.GetOrigin()
+	local lastPositionCheckTime = Time()
+	local stuckThreshold = 2.0
+	local minMovementDistance = 100.0
 
-        if ( !IsAlive(candidate) )
-            continue
+	while ( true )
+	{
+		// Check if stuck
+		local currentTime = Time()
+		local currentPosition = titan.GetOrigin()
+		local timeSinceLastCheck = currentTime - lastPositionCheckTime
 
-        local d = Distance(origin, candidate.GetOrigin())
+		if ( timeSinceLastCheck >= stuckThreshold )
+		{
+			local distanceMoved = Distance( currentPosition, lastPosition )
+			if ( distanceMoved < minMovementDistance )
+			{
+				AI_SendToRandomLocation( titan, titanTeam )
+				lastValidTargetTime = currentTime
+			}
 
-        if ( d < closestDist )
-        {
-            closest = candidate
-            closestDist = d
-        }
-    }
+			lastPosition = currentPosition
+			lastPositionCheckTime = currentTime
+		}
 
-    return closest
+		local target = AI_SelectTarget( titan, titanTeam )
+		if ( IsValid( target ) )
+		{
+			titan.SetEnemy( target )
+			SendAIToAssaultPoint( titan, target.GetOrigin(), null, 256 )
+			lastValidTargetTime = currentTime
+		}
+		else
+		{
+			local timeSinceLastTarget = currentTime - lastValidTargetTime
+			if ( timeSinceLastTarget >= 1.0 )
+			{
+				AI_SendToRandomLocation( titan, titanTeam )
+				lastValidTargetTime = currentTime
+			}
+		}
+		wait RandomFloat( 1.5, 3.0 )
+	}
 }
+
+function AI_SelectTarget( titan, team )
+{
+	local enemyTeam = GetOtherTeam( team )
+	local origin = titan.GetOrigin()
+	local highPriority = []
+
+	// Priority 1: Spotted players and enemy titans
+	if ( team in level.aiSpottedPlayers )
+	{
+		local enemyPlayers = GetPlayerArrayOfTeam( enemyTeam )
+		foreach ( player in enemyPlayers )
+		{
+			if ( player in level.aiSpottedPlayers[team] )
+				highPriority.append( player )
+		}
+	}
+
+	// Add ALL enemy titans
+	highPriority.extend( GetNPCArrayEx( "npc_titan", enemyTeam, origin, -1 ) )
+
+	local best = AI_FindClosestValid( highPriority, origin )
+	if ( best != null )
+		return best
+
+	// Priority 2: Low priority NPCs
+	local lowPriority = []
+	lowPriority.extend( GetNPCArrayEx( "npc_soldier", enemyTeam, origin, -1 ) )
+	lowPriority.extend( GetNPCArrayEx( "npc_spectre", enemyTeam, origin, -1 ) )
+
+	return AI_FindClosestValid( lowPriority, origin )
+}
+
+function AI_FindClosestValid( candidates, origin )
+{
+	local best = null
+	local bestDist = 99999999.0
+
+	foreach ( candidate in candidates )
+	{
+		if ( !IsValid( candidate ) )
+			continue
+		if ( candidate.IsPlayer() && !IsAlive( candidate ) )
+			continue
+
+		local dist = DistanceSqr( candidate.GetOrigin(), origin )
+		if ( dist < bestDist )
+		{
+			best = candidate
+			bestDist = dist
+		}
+	}
+
+	return best
+}
+
+function AI_SendToRandomLocation( titan, team )
+{
+	local enemyTeam = GetOtherTeam( team )
+	local assaultPoints = GetEntArrayByClass_Expensive( "info_frontline" )
+
+	if ( assaultPoints.len() > 0 )
+	{
+		local randomPoint = assaultPoints[ RandomInt( assaultPoints.len() ) ]
+		SendAIToAssaultPoint( titan, randomPoint.GetOrigin(), null, 512 )
+		return
+	}
+
+	local enemySpawns = SpawnPoints_GetTitanStart( enemyTeam )
+	if ( enemySpawns.len() > 0 )
+	{
+		local randomSpawn = enemySpawns[ RandomInt( enemySpawns.len() ) ]
+		SendAIToAssaultPoint( titan, randomSpawn.GetOrigin(), null, 512 )
+		return
+	}
+
+	local currentPos = titan.GetOrigin()
+	local randomOffset = Vector( RandomFloat( -1000, 1000 ), RandomFloat( -1000, 1000 ), 0 )
+	SendAIToAssaultPoint( titan, currentPos + randomOffset, null, 256 )
+}
+
+Globalize( AI_SpottingThink )
+Globalize( AI_HuntThink )
+Globalize( AI_SelectTarget )
 
 
 ////////////////////////////////////////////////////////////////
@@ -5504,4 +5468,144 @@ function ApplyDroneCloak( drone, target )
     }
 
     target.SetCloakDuration( 3.0, -1, 0 ) 
+}
+
+function DecayNPCDomeShield( titan, delay )
+{
+    titan.EndSignal( "OnDeath" )
+    titan.EndSignal( "OnDestroy" )
+
+    wait delay
+
+    // Ensure the Titan has a valid soul and shield before trying to destroy it
+    if ( IsValid( titan ) && IsValid( titan.GetTitanSoul() ) )
+    {
+        local soul = titan.GetTitanSoul()
+        if ( IsValid( soul.bubbleShield ) )
+        {
+            soul.bubbleShield.Destroy()
+        }
+    }
+}
+
+
+function GetHardpointObjectiveForTeam( team, squadOrigin )
+{
+    local hardpoints = GetEntArrayByClass_Expensive( "info_hardpoint" )
+
+    if ( hardpoints.len() == 0 )
+        return null
+
+    local bestHP = null
+    local bestScore = 999999999.0
+
+    foreach ( hp in hardpoints )
+    {
+        local score = sqrt( DistanceSqr( hp.GetOrigin(), squadOrigin ) )
+
+        // Enemy-owned points are highest priority
+        if ( hp.GetTeam() == team )
+            score += 2000        // discourage friendly points
+        else if ( hp.GetTeam() == TEAM_UNASSIGNED )
+            score += 300         // neutral
+        else
+            score -= 500         // enemy
+
+        // Congestion penalty
+        local idx = hp.GetEncodedEHandle().tostring()
+
+        if ( idx in level.hardpointAssignments )
+            score += level.hardpointAssignments[idx] * 900
+
+        if ( score < bestScore )
+        {
+            bestScore = score
+            bestHP = hp
+        }
+    }
+
+    return bestHP
+}
+
+function SquadHardpointRunThink( squad, squadIndex )
+{
+    if ( !squad || squad.len() == 0 )
+        return
+
+    local team = squad[0].GetTeam()
+    local currentReservation = null
+
+    while ( true )
+    {
+        ArrayRemoveInvalid( squad )
+
+        if ( squad.len() == 0 )
+            break
+
+        // Remove previous reservation
+        if ( currentReservation != null )
+        {
+            local id = currentReservation.GetEncodedEHandle().tostring()
+
+            if ( id in level.hardpointAssignments )
+            {
+                level.hardpointAssignments[id]--
+
+                if ( level.hardpointAssignments[id] <= 0 )
+                    delete level.hardpointAssignments[id]
+            }
+
+            currentReservation = null
+        }
+
+        local squadOrigin = squad[0].GetOrigin()
+
+        local hp = GetHardpointObjectiveForTeam( team, squadOrigin )
+
+        if ( hp == null )
+        {
+            wait 5.0
+            continue
+        }
+
+        // Reserve the new objective
+        currentReservation = hp
+
+        local id = hp.GetEncodedEHandle().tostring()
+
+        if ( !(id in level.hardpointAssignments) )
+            level.hardpointAssignments[id] <- 0
+
+        level.hardpointAssignments[id]++
+
+        local pos = hp.GetOrigin()
+
+        foreach ( npc in squad )
+        {
+            if ( !IsAlive( npc ) )
+                continue
+
+            if ( !("assaultPoint" in npc.s) )
+                continue
+
+            npc.s.assaultPoint.SetOrigin( pos )
+        }
+
+        wait 8.0
+    }
+
+
+    // Release reservation when squad dies
+    if ( currentReservation != null )
+    {
+        local id = currentReservation.GetEncodedEHandle().tostring()
+
+        if ( id in level.hardpointAssignments )
+        {
+            level.hardpointAssignments[id]--
+
+            if ( level.hardpointAssignments[id] <= 0 )
+                delete level.hardpointAssignments[id]
+        }
+    }
 }

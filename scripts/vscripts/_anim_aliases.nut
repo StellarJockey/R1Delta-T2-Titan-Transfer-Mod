@@ -47,7 +47,7 @@ function AddAnimAlias( titanType, alias, animation )
 	level.animAliases[ alias ][ titanType ] <- animation
 }
 
-function GetAnimFromAlias( titanType, alias )
+function GetAnimFromAlias( titanType, alias )//necessary...must improvise
 {
 	if ( titanType == "special_atlas" )
 	{

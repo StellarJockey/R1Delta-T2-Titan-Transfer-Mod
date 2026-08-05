@@ -7,7 +7,7 @@ SmartAmmo_SetUnlockAfterBurst( self, (SMART_AMMO_PLAYER_MAX_LOCKS > 1) )
 // things that
 function InitForAllClients()
 {
-	SmartAmmo_SetWarningIndicatorDelay( self, 0.0 )
+	SmartAmmo_SetWarningIndicatorDelay( self, 9999.0 )
 }
 
 function OnWeaponActivate( activateParams )

@@ -163,8 +163,8 @@ function UpdateShoulderTurretTargetUI( ownerPlayer, target )
 {
 	target.EndSignal( "OnDeath" )
 	ownerPlayer.EndSignal( "OnTurretTargetChanged" )
-	ownerPlayer.EndSignal( "OnDeath" )  // ← ADD THIS LINE
-	ownerPlayer.EndSignal( "OnDestroy" )  // ← OPTIONAL: Also add for extra safety
+	ownerPlayer.EndSignal( "OnDeath" ) 
+	ownerPlayer.EndSignal( "OnDestroy" )
 
 	EmitSoundOnEntity( ownerPlayer, "Weapon_SmartAmmo.TargetLocked" )
 

@@ -42,8 +42,8 @@ IncludeFile( "ui/menu_image_walk_through" )
 IncludeFile( "ui/menu_main" )
 IncludeFile( "ui/menu_serverbrowser" )
 IncludeFile( "ui/menu_addons")
-IncludeFile( "ui/menu_hud_settings")
-IncludeFile( "ui/menu_hud_settings_r1d")
+IncludeFile( "ui/menu_hud_settings" )
+IncludeFile( "ui/menu_hud_settings_r1d" )
 IncludeFile( "ui/menu_vote" )
 IncludeFile( "ui/menu_vote_target" )
 IncludeFile( "ui/menu_options" )
@@ -687,10 +687,10 @@ function UICodeCallback_LevelInit( levelname )
 		    if ( ShouldShowBurnCardMenu() )
 		    	AdvanceMenu( GetMenu( "BurnCards_pickcard" ) )
 
-			if ( gameModeString != "ps" ) //JFS. For R2 maybe try checking against Riff settings to see if Titans are disabled or not.
+			if ( gameModeString != PILOT_SKIRMISH && gameModeString != GUN_GAME ) //JFS. For R2 maybe try checking against Riff settings to see if Titans are disabled or not.
 				AdvanceMenu( GetMenu( "TitanLoadoutsMenu" ) )
 
-			if ( !IsTitanOnlyMode() )
+			if ( !IsTitanOnlyMode() && gameModeString != GUN_GAME )
 				AdvanceMenu( GetMenu( "PilotLoadoutsMenu" ) )
 	    }
 	    else
@@ -851,6 +851,13 @@ function UICodeCallback_NavigateBack()
 					    return
 			    }
 
+				if ( "navBackFunc" in uiGlobal.activeMenu.s )
+				{
+					uiGlobal.activeMenu.s.navBackFunc.acall( [ uiGlobal.activeMenu.s.scope ] )
+					printt( "Called navBackFunc for:", uiGlobal.activeMenu.GetName() )
+					return
+				}
+
 			    CloseTopMenu()
 		    }
 	    }
@@ -908,6 +915,17 @@ function GetMenu( menuName )
 function UICodeCallback_ControllerModeChanged( controllerModeEnabled )
 {
 	//printt( "CONTROLLER! " + controllerModeEnabled + ", " + IsControllerModeActive() )
+
+	local menu = uiGlobal.activeMenu
+	if ( !menu )
+		return
+
+	if ( "inputModeChangedFunc" in menu.s )
+	{
+		menu.s.inputModeChangedFunc.acall( [ menu.s.scope ] )
+		printt( "Called inputModeChangedFunc for:", menu.GetName() )
+		return
+	}
 }
 
 function UICodeCallback_OnVideoOver()
@@ -1880,6 +1898,11 @@ function OpenMenuWrapper( menu, focusDefault )
 			break
 
 		default:
+			if ( "openFunc" in menu.s )
+			{
+				menu.s.openFunc.acall( [ menu.s.scope ] )
+				printt( "Called openFunc for:", menu.GetName() )
+			}
 			break
 	}
 }
@@ -2083,6 +2106,11 @@ function CloseMenuWrapper( menu )
 			break
 
 		default:
+			if ( "closeFunc" in menu.s )
+			{
+				menu.s.closeFunc.acall( [ menu.s.scope ] )
+				printt( "Called closeFunc for:", menu.GetName() )
+			}
 			break
 	}
 }
@@ -2564,6 +2592,38 @@ Globalize( SetupButtonText )
 function ShowButtonDescription( button )
 {
 	SetElementsTextByClassname( uiGlobal.activeMenu, "MenuItemDescriptionClass", button.s.description )
+}
+
+function GetMapName()
+{
+	return GetActiveLevel()
+}
+Globalize( GetMapName )
+
+function AddMenuEventHandler( menu, event, func )
+{
+	menu.s.scope <- this
+
+	if ( event == eUIEvent.MENU_OPEN )
+	{
+		Assert( menu.s.openFunc == null )
+		menu.s.openFunc <- func
+	}
+	else if ( event == eUIEvent.MENU_CLOSE )
+	{
+		Assert( menu.s.closeFunc == null )
+		menu.s.closeFunc <- func
+	}
+	else if ( event == eUIEvent.MENU_NAVIGATE_BACK )
+	{
+		Assert( menu.s.navBackFunc == null )
+		menu.s.navBackFunc <- func
+	}
+	else if ( event == eUIEvent.MENU_INPUT_MODE_CHANGED )
+	{
+		Assert( menu.s.inputModeChangedFunc == null )
+		menu.s.inputModeChangedFunc <- func
+	}
 }
 
 thread main()

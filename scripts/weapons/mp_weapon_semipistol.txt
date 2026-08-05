@@ -327,6 +327,8 @@ WeaponData
 			"fire_sound_2"						"Weapon_P2011_FireSuppressed"
 			"damage_near_value"   				"60" // "50"
 			"damage_far_value"					"50" //	"50"
+			"damage_near_distance"				"*0.9"
+			"damage_far_distance"				"*0.9"
 			"bodygroup1_set"					"1"
 
 			//"rumble"  						"4"

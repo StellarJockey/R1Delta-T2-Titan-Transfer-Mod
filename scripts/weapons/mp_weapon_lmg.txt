@@ -386,6 +386,13 @@ WeaponData
 			"ammo_default_total"							"960"
 			"ammo_stockpile_max"							"960"
 		}
+		scatterfire
+		{
+			"fire_rate" 								"12.0"
+			"damage_near_value_titanarmor"				"*1.1"
+			"damage_far_value_titanarmor"				"*1.1"
+			"damage_rodeo"								"*0.6"
+		}
 		burn_mod_lmg
 		{
 			"crosshair_index"							"1"

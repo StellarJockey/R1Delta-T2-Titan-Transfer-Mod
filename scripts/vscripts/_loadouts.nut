@@ -1,4 +1,4 @@
-
+// TTT
 function GetLoadoutName( loadout )
 {
 	if ( LoadoutNameIsToken( loadout.name ) )

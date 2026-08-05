@@ -363,6 +363,8 @@ WeaponData
 			"fire_sound_2"									"Weapon_CBR101.SecondShotSuppressed"
 			"damage_near_value"   							"49"
 			"damage_far_value"								"29"
+			"damage_near_distance"				"*0.9"
+			"damage_far_distance"				"*0.9"
 			//Silenced R97
 			"bodygroup5_set"								"1"
 

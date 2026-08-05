@@ -1,4 +1,11 @@
-const HARDPOINT_SHIFT_DELAY = 1
+const HARDPOINT_SHIFT_DELAY = 5
+const CP_AWARD_TEAM_OWNED_POINTS_SIGNAL = "CP_AWARD_TEAM_OWNED_POINTS_SIGNAL"
+const CP_AWARD_PLAYER_HOLD_POINTS_SIGNAL = "CP_AWARD_PLAYER_HOLD_POINTS_SIGNAL"
+const CP_END_CAPPING_WAIT_SIGNAL = "CP_END_CAPPING_WAIT_SIGNAL"
+const CP_LEAVE_TRIGGER = "CP_LEAVE_TRIGGER"
+const CP_REINFORCE_INTERVAL = 1.0
+const CP_CAPTURE_HINT_RADIUS = 1536
+const CP_NAG_DEBOUNCE_TIME = 90
 
 function main()
 {
@@ -51,11 +58,16 @@ function main()
 	RegisterSignal( "NPCStateChange" )
 	RegisterSignal( "Interrupt" )
 
+	RegisterSignal( CP_AWARD_TEAM_OWNED_POINTS_SIGNAL )
+	RegisterSignal( CP_AWARD_PLAYER_HOLD_POINTS_SIGNAL )
+	RegisterSignal( CP_END_CAPPING_WAIT_SIGNAL )
+	RegisterSignal( CP_LEAVE_TRIGGER )
+
 	file.triggerEnterFuncs <- []
 	file.triggerLeaveFuncs <- []
 	file.usedHardpointIDs <- {}
 	file.hardpointUpdateFunc <- null
-	level.AIUseCapturePointTerminals <- false
+	level.AIUseCapturePointTerminals <- false // true means AI can only cap when sitting at terminal
 
 	AddCallback_OnClientConnecting( Hardpoint_OnClientConnecting )
 
@@ -91,6 +103,21 @@ function main()
 	}
 
 	file.termainalAttachmentArray <- [ "SEAT_N", "SEAT_W", "SEAT_S", "SEAT_E" ]
+
+	if ( !GetCinematicMode() && !level.matchProgressAnnounceFunc ) //Don't use default progress announcements if something custom already enabled
+	{
+		local table = {}
+		table[ TEAM_IMC ] <- {}
+		table[ TEAM_MILITIA ] <- {}
+		table[ TEAM_MILITIA ][ "hardpoint_match_progress_25_percent" ] <- false
+		table[ TEAM_MILITIA ][ "hardpoint_match_progress_50_percent" ] <- false
+		table[ TEAM_MILITIA ][ "hardpoint_match_progress_75_percent" ] <- false
+		table[ TEAM_IMC ][ "hardpoint_match_progress_25_percent" ] <- false
+		table[ TEAM_IMC ][ "hardpoint_match_progress_50_percent" ] <- false
+		table[ TEAM_IMC ][ "hardpoint_match_progress_75_percent" ] <- false
+
+		level.cpMatchProgressDialog <- table
+	}
 }
 
 function NearHardpoint( dropPoint )
@@ -182,7 +209,8 @@ function InitializeHardpoint( hardpoint )
 	InitializeHardpointAssaultEnts( hardpoint )
 	InitializeHardpointTurrets( hardpoint )
 
-	thread SetupHardpointTerminal( hardpoint )
+	if ( GameRules.GetGameMode() != UPLINK )
+		thread SetupHardpointTerminal( hardpoint )
 }
 
 
@@ -492,7 +520,6 @@ function NPCsAssaultHardpoint( squadMembers, hardpoint )
 function AssaultHardpoint( guy, hardpoint )
 {
 	thread AssaultHardpointLoop( guy, hardpoint )
-	thread DynamicHardpointReassignment( guy, hardpoint )	
 }
 
 
@@ -588,7 +615,19 @@ function AssaultHardpointLoop( guy, hardpoint )
 
 function ShouldHangOutsideHardpoint( guy, hardpoint, spawnPointArray )
 {
-	return false
+	// no place to hang
+	if ( !spawnPointArray.len() )
+		return false
+
+	if ( Distance( guy.GetOrigin(), hardpoint.GetTerminal().GetOrigin() ) > 1200 )
+		return false
+
+	// hardpoint is not captured, run inside!
+	if ( hardpoint.GetHardpointState() != CAPTURE_POINT_STATE_CAPTURED )
+		return false
+
+	// hardpoint is captured, but its our team, so hang outside
+	return hardpoint.GetTeam() == guy.GetTeam()
 }
 
 function GetAIAssaultingHardPoint( hardpoint )
@@ -866,10 +905,7 @@ function UpdateHardpointCount( point )
 			}
 			else if ( usingTerminal )
 			{
-				if ( ent.IsTitan() )
-					teamAICount[entTeam] += 3 // AI Titans now count as 3 minions (adjust to your liking)
-				else
-					teamAICount[entTeam]++
+				teamAICount[entTeam]++
 			}
 		}
 	}
@@ -1169,6 +1205,9 @@ function HardpointTerminal_HaveRecentEnemy( guys, terminal )
 //////////////////////////////////////////////////////////
 function GetSlot( guy, terminal, hardpoint )
 {
+	if ( "suicideBehavior" in guy.s )
+		return false
+
 	if ( terminal.s.slotsInUse >= 2 )
 		return false
 
@@ -1260,7 +1299,7 @@ function RunToSlot( guy, terminal, hardpoint, state )
 		local angles = result.angles
 
 		guy.CrouchCombat( false )	// resets in the end thread
-		SetAssaultPointValues( guy.s.assaultPoint, 0, 16, 0, 1 )
+		SetAssaultPointValues( guy.s.assaultPoint, 512, 16, 0, 1 )
 		waitthread GotoOriginCP( guy, origin, angles )
 	}
 	else
@@ -1447,7 +1486,7 @@ function ConvergeAtTerminal( guy, hardpoint )
 
 	local origin = assaultPoint.GetOrigin()
 	local angles = assaultPoint.GetAngles()
-	SetAssaultPointValues( guy.s.assaultPoint, 0, 128, 1, 1 )
+	SetAssaultPointValues( guy.s.assaultPoint, 512, 128, 1, 1 )
 	waitthread GotoOriginCP( guy, origin, angles )
 
 	// delay the change of state a bit to make it look more natural
@@ -1961,64 +2000,474 @@ function HardpointControlPanelsChangedTeam( hardpoint, team )
 	}
 }
 
-function GetEnemyOrNeutralHardpoint( team )
+///////////////////////////////////////////////////////////////////////////////
+
+function SortHardpointsByGroup( hardpointArray )
 {
-	local hardpoints = GetHardpoints()
-	local validTargets = []
-	
-	foreach ( hp in hardpoints )
+	//if more than 3, choose three
+	local desiredHardpoints = 3
+	local selectedHardpoints = []
+	for ( local i = 0 ; i < desiredHardpoints ; i++ )
+		selectedHardpoints.append( null )
+	ArrayRandomize( hardpointArray )
+
+	//if there is a group A, choose one for it
+	local need_A = true
+	//if there is a group B, choose one for it
+	local need_B = true
+	//if there is a group C, choose one for it
+	local need_C = true
+
+	foreach( hardpoint in hardpointArray )
 	{
-		// If the hardpoint is not owned by our team, it's a valid target
-		if ( hp.GetTeam() != team )
+		if ( hardpoint.HasKey( "hardpointGroup" ) )
 		{
-			validTargets.append( hp )
-		}
-	}
-	
-	if ( validTargets.len() > 0 )
-	{
-		// Pick a random unowned/enemy hardpoint to attack
-		return validTargets[ RandomInt( validTargets.len() ) ]
-	}
-	
-	return null // All points are captured by our team
-}
-
-function DynamicHardpointReassignment( guy, initialHardpoint )
-{
-	guy.EndSignal( "OnDeath" )
-	guy.EndSignal( "OnDestroy" )
-
-	local currentTarget = initialHardpoint
-
-	while ( true )
-	{
-		wait 1.0 
-
-		if ( !IsValid( currentTarget ) )
-			continue
-			
-		// --- CHECK IF THIS IS AN ENEMY MINION ---
-		local players = GetPlayerArray()
-		if ( players.len() > 0 && guy.GetTeam() == players[0].GetTeam() )
-		{
-			// If this is an ALLIED minion, stop the thread. 
-			// They will stay and defend whatever point they just captured.
-			return 
-		}
-		// ----------------------------------------
-
-		// If the current target is now owned by the enemy minion's team
-		if ( currentTarget.GetTeam() == guy.GetTeam() )
-		{
-			local newTarget = GetEnemyOrNeutralHardpoint( guy.GetTeam() )
-			
-			if ( newTarget != null && newTarget != currentTarget )
+			if( hardpoint.kv.hardpointGroup == "A" && ( need_A ) )
 			{
-				currentTarget = newTarget
-				thread AssaultHardpoint( guy, currentTarget )
-				return 
+				selectedHardpoints[0] = hardpoint
+				need_A = false
+			}
+			if ( hardpoint.kv.hardpointGroup == "B" && ( need_B ) )
+			{
+				selectedHardpoints[1] = hardpoint
+				need_B = false
+			}
+			if ( hardpoint.kv.hardpointGroup == "C" && ( need_C ) )
+			{
+				selectedHardpoints[2] = hardpoint
+				need_C = false
 			}
 		}
 	}
+
+	// see how many groups arent filled and fill them
+	local groups_needed = desiredHardpoints - GetNumHardpointsInArray( selectedHardpoints )
+	if ( groups_needed )
+	{
+		foreach( hardpoint in hardpointArray )
+		{
+			if ( hardpoint.HasKey( "hardpointGroup" ) )
+				continue
+
+			//if ( hardpoint.GetName() == UPLINK )
+			//	continue
+
+			if ( desiredHardpoints == GetNumHardpointsInArray( selectedHardpoints ) )
+				break
+
+			AddHardpointToArray( selectedHardpoints, hardpoint )
+		}
+	}
+
+	foreach( hardpoint in hardpointArray )
+	{	// delete unselected hardpoints and any associated triggers and panels
+		if ( !ArrayContains( selectedHardpoints, hardpoint ) )
+			DeleteHardpoint( hardpoint )
+	}
+
+	return selectedHardpoints
+}
+Globalize( SortHardpointsByGroup )
+
+const HARDPOINT_CLOSE_DIST = 768
+
+// to be replaced with acutal triggers
+function HardpointRadiusCheck()
+{
+	while ( true )
+	{
+		local players = GetPlayerArray()
+		foreach ( player in players )
+		{
+			if ( !IsAlive( player ) )
+				continue
+
+			local playerWasCloseToHardPoint = false
+
+			foreach ( hardpoint in level.hardpoints )
+			{
+				if ( !hardpoint.Enabled() )
+					continue
+
+				local distance = Distance( player.GetOrigin(), hardpoint.GetOrigin() )
+
+				if ( distance < 1536 )
+				{
+					player.s.curHardpoint = hardpoint
+					player.s.curHardpointDist = distance
+					player.s.lastHardPointActivityTime = Time()
+
+					if ( !player.s.curHardpointTime )
+					{
+						player.s.curHardpointTime = Time()
+						CapturePointVO_Approaching( player, hardpoint, distance )
+					}
+
+					playerWasCloseToHardPoint = true
+				}
+				else if ( distance >= 1536 && hardpoint == player.s.curHardpoint )
+				{
+					player.s.curHardpoint = null
+					player.s.curHardpointDist = null
+					player.s.curHardpointTime = null
+					Remote.CallFunction_NonReplay( player, "ServerCallback_CancelScene", 0 ) // this should be more robust... scene index, etc.. for next game
+				}
+			}
+
+			if ( !playerWasCloseToHardPoint )
+				CapturePointVO_Nag( player )
+		}
+
+		wait 0.5
+	}
+}
+Globalize( HardpointRadiusCheck )
+
+/*
+both teams have 1.5 points for full duration
+one point should award scoreLimit / 1.5 / timeLimitMinutes points per minute
+*/
+function CapturePoint_AwardTeamOwnedPoints( hardpoint )
+{
+	hardpoint.s.trigger.Signal( CP_AWARD_TEAM_OWNED_POINTS_SIGNAL )
+	EndSignal( hardpoint.s.trigger, CP_AWARD_TEAM_OWNED_POINTS_SIGNAL )
+
+	if ( hardpoint.GetTeam() == TEAM_UNASSIGNED )
+		return
+
+/*
+	// 하드포인트에 가장 먼저 진입한 player 가 titan 탑승 상태일 때와 아닌 경우 포인트 다르게.
+	// 하드포인트에 가장 먼저 진한 플레이어 찾는 코드 추가.
+	// 단 파일럿 상태로 진입 후 캡쳐 진행 도중 타이탄 소환 및 탑승 시
+	// 타이탄 상태로 점령한 포인트로 올라간다.
+	// 원래는 capture point 는 없고 hold 포인트만 1씩 올려주고 있다.
+	// Find the player who was in the trigger first
+	local earliestPlayer = null
+	local earliestTime = Time() + 1000
+
+	foreach( player, time in hardpoint.s.teamPlayersTouching[ hardpoint.GetTeam() ] )
+	{
+		if ( !IsValid_ThisFrame( player ) )
+			continue
+
+		if ( time < earliestTime )
+		{
+			earliestPlayer = player
+			earliestTime = time
+		}
+	}
+
+	if ( !IsValid( earliestPlayer ) )
+		return // lone player capping hardpoint probably disconnected
+
+	local operatorControlled = false
+	if ( !IsPlayer( earliestPlayer ) )
+	{
+		earliestPlayer = earliestPlayer.GetOwnerPlayer()
+		//printl( "earliestPlayer was a marvin, owner = " + earliestPlayer.GetClassname() )
+		if ( !earliestPlayer || !IsPlayer( earliestPlayer ) )
+			return
+		operatorControlled = true
+	}
+
+
+	if( earliestPlayer.IsTitan() )
+		GameScore.AddTeamScore( hardpoint.GetTeam(), TEAMPOINTVALUE_HARDPOINT_CAPTURE_TITAN )
+	else
+		GameScore.AddTeamScore( hardpoint.GetTeam(), TEAMPOINTVALUE_HARDPOINT_CAPTURE )
+	*/
+
+	while( GetGameState() == eGameState.Playing )
+	{
+		Wait( TEAM_OWNED_SCORE_FREQ )
+		GameScore.AddTeamScore( hardpoint.GetTeam(), TEAMPOINTVALUE_HARDPOINT_OWNED )
+		if ( !GetCinematicMode() && !level.matchProgressAnnounceFunc ) //Don't use default progress announcements if something custom already enabled
+		{
+			CPMatchProgressDialogue( TEAM_IMC )
+			CPMatchProgressDialogue( TEAM_MILITIA )
+		}
+
+	}
+}
+Globalize( CapturePoint_AwardTeamOwnedPoints )
+
+function CapturePoint_AwardPlayerHoldPoints( hardpoint )
+{
+	hardpoint.s.trigger.Signal( CP_AWARD_PLAYER_HOLD_POINTS_SIGNAL )
+	EndSignal( hardpoint.s.trigger, CP_AWARD_PLAYER_HOLD_POINTS_SIGNAL )
+
+	if ( hardpoint.GetTeam() == TEAM_UNASSIGNED )
+		return
+
+	while( GetGameState() == eGameState.Playing )
+	{
+		Wait( PLAYER_HELD_SCORE_FREQ )
+		CapturePoint_AwardPlayerHoldPointsInternal( hardpoint )
+	}
+}
+Globalize( CapturePoint_AwardPlayerHoldPoints )
+
+function CapturePoint_AwardPlayerHoldPointsInternal( hardpoint )
+{
+	if ( GetGameState() != eGameState.Playing )
+		return
+
+	local teamToGetPoints = hardpoint.GetTeam()
+	if ( teamToGetPoints == TEAM_UNASSIGNED )
+		teamToGetPoints = hardpoint.s.lastCappingTeam
+
+	local players = GetPlayerArrayOfTeam( teamToGetPoints )
+
+	foreach ( player in players )
+	{
+		Assert( "curHardpoint" in player.s && "curHardpointTime" in player.s )
+
+		if ( !IsAlive( player ) || player.s.curHardpoint == null || player.s.curHardpointTime == null )
+			continue
+
+		if ( player.s.curHardpoint == hardpoint )
+		{
+			if ( (Time() - player.s.curHardpointTime) >= PLAYER_HELD_SCORE_FREQ )
+				AddPlayerScore( player, "ControlPointHold" )
+		}
+	}
+}
+
+function CapturePoint_AwardPlayerPoints( hardpoint )
+{
+	if( GetGameState() != eGameState.Playing )
+		return
+
+	local teamToGetPoints = hardpoint.GetTeam()
+	if ( hardpoint.GetTeam() == TEAM_UNASSIGNED )
+		teamToGetPoints = hardpoint.s.lastCappingTeam
+
+	/*
+	if ( teamToGetPoints == TEAM_UNASSIGNED )
+		printl( "TRYING TO AWARD PLAYER POINTS FOR TEAM: UNASSIGNED" )
+	else if ( teamToGetPoints == TEAM_IMC )
+		printl( "TRYING TO AWARD PLAYER POINTS FOR TEAM: IMC" )
+	else if ( teamToGetPoints == TEAM_MILITIA )
+		printl( "TRYING TO AWARD PLAYER POINTS FOR TEAM: MILITIA" )
+	*/
+
+	// There should be some players in the array, otherwise not sure how it could have possibly changed ownership
+	Assert( teamToGetPoints != TEAM_UNASSIGNED )
+	//Assert( hardpoint.s.teamPlayersTouching[ teamToGetPoints ].len() > 0 )
+
+	// Find the player who was in the trigger first
+	local earliestPlayer = null
+	local earliestTime = Time() + 1000
+
+	foreach( player, time in hardpoint.s.teamPlayersTouching[ teamToGetPoints ] )
+	{
+		if ( !IsValid_ThisFrame( player ) )
+			continue
+
+		if ( time < earliestTime )
+		{
+			earliestPlayer = player
+			earliestTime = time
+		}
+	}
+
+	if ( !IsValid( earliestPlayer ) )
+		return // lone player capping hardpoint probably disconnected
+
+	local operatorControlled = false
+	if ( !IsPlayer( earliestPlayer ) )
+	{
+		earliestPlayer = earliestPlayer.GetOwnerPlayer()
+		//printl( "earliestPlayer was a marvin, owner = " + earliestPlayer.GetClassname() )
+		if ( !earliestPlayer || !IsPlayer( earliestPlayer ) )
+			return
+		operatorControlled = true
+	}
+
+	// Award points to the player who was in the trigger the soonest
+	if ( hardpoint.GetTeam() == TEAM_UNASSIGNED )
+	{
+		AddPlayerScore( earliestPlayer, "ControlPointNeutralize" )
+	}
+	else
+	{
+		AddPlayerScore( earliestPlayer, "ControlPointCapture" )
+	}
+
+	// Give points to everyone else also standing in the trigger when it changed
+	// Make an array of players instead of looping through them so we can avoid duplicates, because if an operator has multiple marvins in the trigger you dont want to award points for each OnEndTouch
+	local playersToGetPoints = {}
+	foreach ( player, time in hardpoint.s.teamPlayersTouching[ teamToGetPoints ] )
+	{
+		if ( !IsPlayer( player ) )
+		{
+			player = player.GetOwnerPlayer()
+			if ( !IsPlayer( player ) )
+				continue
+		}
+
+		if ( player == earliestPlayer )
+			continue
+
+		if ( player in playersToGetPoints )
+			continue
+
+		playersToGetPoints[ player ] <- true
+	}
+
+	// loop through the players array and award the points
+	foreach ( player, val in playersToGetPoints )
+	{
+		if ( hardpoint.GetTeam() == TEAM_UNASSIGNED )
+		{
+			AddPlayerScore( player, "ControlPointNeutralizeAssist" )
+		}
+		else
+		{
+			AddPlayerScore( player, "ControlPointCaptureAssist" )
+		}
+	}
+}
+Globalize( CapturePoint_AwardPlayerPoints )
+
+//////////////////////////////////////////////////////////
+function CapturePointVO_Allowed( player )
+{
+	return ( GetGameState() == eGameState.Playing && player.s.hasDoneTryGameModeAnnouncement && TimeSpentInCurrentState() > 10.0 )
+}
+
+
+//////////////////////////////////////////////////////////
+function CapturePointVO_Approaching( player, hardpoint, distance )
+{
+	if ( !CapturePointVO_Allowed( player ) )
+		return
+
+	local team = player.GetTeam()
+
+	if ( hardpoint.s.lastCappingTeam == player.GetTeam() )
+		return
+
+	local powerTable = GetCapPower( hardpoint )
+
+	if ( powerTable.contested )
+	{
+		if ( hardpoint.s.startCapTime && Time() - hardpoint.s.startCapTime > 5.0 )
+			return
+
+		if ( hardpoint.s.lastCapTime && Time() - hardpoint.s.lastCapTime < 8.0 )
+			return
+	}
+
+	local hardpointStringID = GetHardpointStringID( hardpoint.GetHardpointID() )
+
+	local vector = hardpoint.GetOrigin() - player.GetOrigin()
+	vector.Norm()
+	local view = player.GetViewVector()
+	local dot = vector.Dot( view )
+
+	local team = player.GetTeam()
+	local otherTeam = team == TEAM_IMC ? TEAM_MILITIA : TEAM_IMC
+	local powerTable = GetCapPower( hardpoint )
+	local haveEnemies = ( otherTeam == powerTable.strongerTeam || powerTable.contested )
+
+	if ( haveEnemies )
+	{
+		// player is closing in on a enemy occupied hardpoint
+		PlayConversationToPlayer( "hardpoint_player_approach_enemy_" + hardpointStringID, player )
+	}
+	else if ( dot > 0.86 ) // ~30 degree
+	{
+		// player is facing the hardpoint
+		PlayConversationToPlayer( "hardpoint_player_approach_ahead_" + hardpointStringID, player )
+	}
+	else
+	{
+		// player is looking away from the hardpoint, be less specific with the dialog
+		PlayConversationToPlayer( "hardpoint_player_approach_" + hardpointStringID, player )
+	}
+	return true
+}
+
+
+//////////////////////////////////////////////////////////
+function CapturePointVO_Nag( player )
+{
+	if ( !CapturePointVO_Allowed( player ) )
+		return
+
+	Assert( player.IsPlayer() )
+
+	Assert( IsAlive( player ) ) //Checked before we got in here, but checking again
+
+	local timeSinceLastHardPointActivity = Time() - player.s.lastHardPointActivityTime
+
+	if ( timeSinceLastHardPointActivity >  CP_NAG_DEBOUNCE_TIME )
+	{
+		//printt( "Nagging because timeSinceLastHardPointActivity is: " + timeSinceLastHardPointActivity )
+		PlayConversationToPlayer( "hardpoint_nag",  player )
+		player.s.lastHardPointActivityTime = Time()
+	}
+	/*else
+	{
+		printt( "No need to nag because timeSinceLastHardPointActivity: " + timeSinceLastHardPointActivity )
+
+	}*/
+
+}
+
+function GetNumHardpointsInArray( array )
+{
+	local count = 0
+	foreach( item in array )
+	{
+		if ( item != null )
+			count++
+	}
+	return count
+}
+
+function AddHardpointToArray( array, val )
+{
+	foreach( i, item in array )
+	{
+		if ( item == null )
+		{
+			array[ i ] = val
+			return
+		}
+	}
+	array.append( val )
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Hardpoint match progress stuff
+function CPMatchProgressDialogue( team )
+{
+	local score = GameRules.GetTeamScore( team )
+	local scoreLimit = GetScoreLimit_FromPlaylist()
+	local scoreProgress = ( score.tofloat() / scoreLimit.tofloat() ) * 100.0
+
+	//printt( "scoreProgress:" + scoreProgress + " for team: " + team )
+
+	local alias = null
+
+	if ( scoreProgress >= 75.0 )
+		alias = "hardpoint_match_progress_75_percent"
+	else if ( scoreProgress >= 50.0 )
+		alias = "hardpoint_match_progress_50_percent"
+	else if ( scoreProgress >= 25.0 )
+		alias = "hardpoint_match_progress_25_percent"
+
+	if ( !alias )
+		return
+
+	//printt( "Alias: " + alias )
+
+	if ( !level.cpMatchProgressDialog[ team ][ alias ] )
+	{
+		level.cpMatchProgressDialog[ team ][ alias ] = true
+		PlayConversationToTeam( alias, team )
+	}
+
 }

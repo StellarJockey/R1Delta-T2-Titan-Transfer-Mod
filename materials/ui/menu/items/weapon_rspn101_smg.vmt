@@ -1,0 +1,8 @@
+Basic
+{
+	$basetexture		"ui/menu/items/weapon_rspn101_smg"
+	$translucent		1
+	$vertexcolor		1
+	$vertexalpha		1
+	$ignorez			1
+}

@@ -1654,8 +1654,8 @@ function FillBurnCardDeckFromArray( player, array )
 		player.SetPersistentVar( _GetBurnCardPersPlayerDataPrefix() + ".burnCardIsNew[" + i + "]", false )
 	}
 
-	// Fill only the slots provided in the array
-	for ( local i = 0; i < array.len(); i++ )
+	// Fill only the slots provided in the array, up to the maximum persistence limit
+	for ( local i = 0; i < array.len() && i < max; i++ )
 	{
 		local card = array[i]
 		if( card != null )

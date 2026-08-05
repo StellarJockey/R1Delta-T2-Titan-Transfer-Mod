@@ -1,4 +1,4 @@
-
+// FO
 
 function GetCurrentPlaylistVarFloat( val, useVal )
 {
@@ -452,9 +452,16 @@ function ShouldDoReplay( player, attacker, replayTime )
 
 	if ( attacker == player )
 		return false
+	
+	if ( GetCurrentPlaylistName() == "campaign_carousel" )
+		return false
 
 	// Check for connectTime property existence (for replay buffer check)
 	if ( !( "connectTime" in player ) || !( "connectTime" in attacker ) )
+		return false
+
+	// Both players must have valid connectTime
+	if ( player.connectTime == null || attacker.connectTime == null )
 		return false
 
 	// Additional defensive check: Ensure minimum replay buffer time
@@ -814,8 +821,8 @@ function Dump( package, depth = 0 )
 function GetOtherTeam( guy )
 {
 	local team
-	if ( IsFFABased() )
-		return 2
+	//if ( IsFFABased() )
+	//	return 2
 
 	if ( typeof guy == "integer" )
 		team = guy
@@ -1035,7 +1042,7 @@ function SkipCinematicStart() //Doesn't quite work as advertised for now.
 
 function SetIsTrainingLevel()
 {
-	level.isTrainingLevel <- GetMapName() == "mp_trainer" || GetMapName() == "mp_npe"
+	level.isTrainingLevel <- ( GetMapName() == "mp_trainer" || GetMapName() == "mp_npe" ) && IsTrainingMode()
 }
 
 function IsFirstCampaignLevel()
@@ -2005,11 +2012,11 @@ function ShouldRunEvac()
 	if ( winningTeam == TEAM_UNASSIGNED )
 		return false
 
-
-	if ( !GetCurrentPlaylistVarInt( "run_evac", 0 ) )
-    {
-        if ( GameRules.GetGameMode() == COOPERATIVE )
-            return true
+	if ( !GetCurrentPlaylistVarInt( "run_evac", 0 ) ) //If playlist var to always run evac don't do check for players being on both team
+	{
+		// We don't care about player count when playing coop
+		if ( GameRules.GetGameMode() == COOPERATIVE )
+			return true
 
         local losingTeam = GetOtherTeam( winningTeam )
         local playlist = GetCurrentPlaylistName()
@@ -2430,7 +2437,7 @@ function ScoreboardCompareFuncForGamemode( gamemode )
 		case HEIST:
 		default:
 			if ( IsFFABased() )
-				return CompareKills
+				return CompareAssaultScore
 
 			return CompareScore
 	}
@@ -3636,4 +3643,40 @@ function ShouldPreventFriendlyFire( victim, attacker )
 	}
 
 	return false
+}
+
+function IsUplinkMode()
+{
+	return GameRules.GetGameMode() == UPLINK
+}
+
+function GetActiveUplinkPoint()
+{
+	if ( level.nv.activeUplinkID == null )
+		return null
+
+	if ( IsClient() )
+	{
+		local player = GetLocalClientPlayer()
+		local hardpoint = null
+
+		foreach( hardpoint in player.s.hardpointArray )
+		{
+			if ( hardpoint.GetHardpointID() == level.nv.activeUplinkID )
+				return hardpoint
+		}
+
+		return hardpoint
+	}
+	return GetHardpointByID( level.nv.activeUplinkID )
+}
+
+// For FFA
+function GetWinningPlayer()
+{
+	local players = GetSortedPlayers( GetScoreboardCompareFunc(), null )
+	if ( players.len() == 0 )
+		return null
+
+	return players[0]
 }

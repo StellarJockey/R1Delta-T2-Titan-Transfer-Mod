@@ -313,7 +313,7 @@ WeaponData
 			"smart_ammo_hud_lock_style"						"default"
 			"smart_ammo_looping_sound_locked"				"titan_missle_lock_tone"
 		}
-		"match_trigger"
+		"guided_missile_0"
 		{
 			"ammo_clip_size"   								"1"
 			"reload_no_auto_if_ads_pressed"					"1"

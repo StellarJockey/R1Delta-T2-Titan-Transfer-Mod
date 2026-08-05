@@ -504,9 +504,11 @@ function CoreReadyMessage( player )
 			AnnouncementMessage( player, "#HUD_CORE_ONLINE_STRYDER", "#HUD_CORE_ONLINE_STRYDER_HINT" )
 			break
 		
+		/*
 		case "smart_core":
 			AnnouncementMessage( player, "Smart Core Online", "SMART XO-16 loaded and primed." )
 			break
+		*/
 
 		case "missile_core":
 			AnnouncementMessage( player, "Ordnance Core Online", "Route reserve power into ordnance system." )

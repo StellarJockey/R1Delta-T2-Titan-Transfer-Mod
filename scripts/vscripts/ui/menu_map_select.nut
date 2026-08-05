@@ -150,10 +150,30 @@ function MapButton_Focused( button )
 
 	nextMapImage.SetImage( mapImage )
 	nextMapImage.SetColor( 165, 165, 165 )
+	
 	if (GetModeNameForEnum(level.ui.privatematch_mode) == "campaign_carousel") {
 		nextMapName.SetText( GetCampaignMapDisplayName( mapName ) )
-		nextMapDesc.SetText( "#" + mapName + "_CAMPAIGN_MENU_DESC" )
-	} else {
+		nextMapImage.SetColor( 150, 150, 150 )
+		local campaignDescriptions = {
+			mp_fracture =    "1750 Hours, July 15, 2710\n————————————\nThe 1st Militia Fleet arrives in orbit around Victor, desperately low on fuel. They've embedded themselves within a civilian trading convoy, as to not trigger the IMC's orbital defense array. Bish had warned them that a raid of this scale was a very bad idea. They'll either get the fuel or die trying."
+			mp_colony =      "1604 Hours, July 20, 2710\n————————————\nTroy is a backwater world, even by Frontier standards. Initially arriving in search of Militia fugitives, IMC recon satellites found something far worse. Sergeant Blisk has ordered that MK II Spectres be deployed to help. But in trying to reclaim the Vice Admiral's lost ship, an old war hero is forced out of hiding..."
+			mp_relic =       "1800 Hours, July 20, 2710\n————————————\nHaving lost his wife in the massacre, MacAllan makes a deal with the Militia. Their mission is to get the surviving colonists out of harm's way. In exchange, they will receive the Odyssey's black box. If MacAllan is to be believed, it may hold the key to defeating the IMC."
+			mp_angel_city =  "1530 Hours, August 2, 2710\n—————————————\nAfter some digging, Bish has found the next part of MacAllan's plan: an air traffic controller in Angel City's harbor district. MacAllan says this old friend of his can fly anything. But the IMC's Spyglass Network is everywhere. Getting in is the easy part. Getting out will be... less so."
+			mp_outpost_207 = "0105 Hours, August 4, 2710\n—————————————\nMacAllan's gambit during the Battle of Angel City paid off - or so it seems. The IMS Sentinel retreats to the drydock, guarded by Outpost 207. Following the advice of Barker, the Militia sends in a surgical strike team to take out the ship, with the Vice Admiral still onbaord."
+			mp_boneyard =    "1311 Hours, August 12, 2710\n——————————————\nAgainst his will, Barker takes the Militia to the Badlands System, the site of an abandoned IMC research facility. Allegedly, it used ultrasonic weapons to repel hostile wildlife. Bish's job is to collect data and learn how to destroy other towers like it before the IMC can scuttle the base."
+			mp_airbase =     "0506 Hours, August 29, 2710\n——————————————\nAt the eleventh hour, IMC reinforcements prepare to lift off from Despoina, the fourth moon of Demeter. While the Militia commits to a frontal assault, Commander Sarah Briggs leads a strike team inside the base, now armed with Bish's tower-crippling virus - a program he calls the 'Icepick.'"
+			mp_o2 =          "0700 Hours, August 29, 2710\n——————————————\nThe 1st Militia Fleet launches its final assault on the gate-world of Demeter, with the goal of severing the link between the Frontier and the Core Systems. While Bish leads a cyber-attack against the Spyglass Network, MacAllan and Vice Admiral Graves play out their long-awaited endgame..."
+			mp_corporate =   "1530 Hours, December 5, 2710\n——————————————\nIn the epilogue of Demeter's destruction, Marcus Graves was court-martialed for lying under oath about the Odyssey. But after being rescued from a Colonial Navy black site, he now forms an uneasy alliance with the Militia. Together, they attempt to strike one of the IMC's Spectre facilities."
+		}
+
+		if ( mapName in campaignDescriptions ) {
+			nextMapDesc.SetText( campaignDescriptions[mapName] )
+		} else {
+			nextMapDesc.SetText( "#" + mapName + "_CAMPAIGN_MENU_DESC" )
+		}
+	}
+	else
+	{
 		nextMapName.SetText( GetMapDisplayName( mapName ) )
 
 		// --- CUSTOM MAP DESCRIPTION OVERRIDES ---

@@ -397,6 +397,8 @@ WeaponData
 			"fire_sound_1_player_3p"				"Weapon_G2A4_FireSuppressed"
 			"damage_near_value"   				"66"
 			"damage_far_value"					"50"
+			"damage_near_distance"				"*0.9"
+			"damage_far_distance"				"*0.9"
 			"bodygroup5_set"					"1"
 
 			//"rumble"  						"4"

@@ -54,7 +54,7 @@ function MissileThink( weapon, missile )
 
 function OnWeaponActivate( activateParams )
 {
-	local hasGuidedMissiles = self.HasMod( "match_trigger" ) // guided_missile
+	local hasGuidedMissiles = self.HasMod( "guided_missile_0" ) // guided_missile
 
 	if ( !hasGuidedMissiles )
 	{
@@ -95,7 +95,7 @@ function OnWeaponActivate( activateParams )
 
 function OnWeaponDeactivate( deactivateParams )
 {
-	if ( !self.HasMod( "match_trigger" ) )
+	if ( !self.HasMod( "guided_missile_0" ) )
 		SmartAmmo_Stop( self )
 	else
 		self.Signal("StopGuidedLaser")
@@ -124,7 +124,7 @@ function OnWeaponPrimaryAttack( attackParams )
 		attackParams.pos = attackParams.pos + up * 20
 
 	self.EmitWeaponNpcSound( LOUD_WEAPON_AI_SOUND_RADIUS_MP, 0.2 )
-	if ( !self.HasMod( "match_trigger" ) )
+	if ( !self.HasMod( "guided_missile_0" ) )
 	{
 		return SmartAmmo_FireWeapon( self, attackParams, damageTypes.ATRocket )
 	}
@@ -141,7 +141,7 @@ function OnWeaponPrimaryAttack( attackParams )
 		// if ( self.HasMod("titanhammer") )
 			// speed = 800
 
-		if ( self.HasMod( "match_trigger" ) )
+		if ( self.HasMod( "guided_missile_0" ) )
 			SmartWeaponFireSound(self, null)
 		//	self.EmitWeaponSound( weaponSounds["fire"] )
 
@@ -188,14 +188,14 @@ function OnWeaponNpcPrimaryAttack( attackParams )
 
 function OnWeaponStartZoomIn()
 {
-	if ( !self.HasMod( "match_trigger" ) )
+	if ( !self.HasMod( "guided_missile_0" ) )
 		SmartAmmo_Start( self )
 	HandleWeaponSoundZoomIn( self, "Weapon_Archer.ADS_Up" )
 }
 
 function OnWeaponStartZoomOut()
 {
-	if ( !self.HasMod( "match_trigger" ) )
+	if ( !self.HasMod( "guided_missile_0" ) )
 		SmartAmmo_Stop( self )
 	HandleWeaponSoundZoomOut( self, "Weapon_Archer.ADS_Down" )
 }

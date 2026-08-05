@@ -1,4 +1,4 @@
-::pdef_arrays <- {}
+::pdef_arrays <- {} // TTT
 ::pdef_enums <- {}
 ::pdef_keys <- {}
 
@@ -54,6 +54,7 @@ function InitPersistence()
         tmfd = 14
         tmfdp = 15
 		bb = 16
+		uplink = 17
     }
 
     AddPersistenceEnum("gameModes", gameModes)
@@ -164,7 +165,6 @@ function InitPersistence()
 	    mp_weapon_mega3 = 42 // Thunderbolt (minigun)
 	    mp_weapon_mega4 = 43 // Charge Cannon
 	    mp_titanweapon_shoulder_turret = 44
-		mp_weapon_mega5 = 45
 
 		// mp_weapon_mega9 = 44 // Unfinished R101 SMG
     }
@@ -231,6 +231,8 @@ function InitPersistence()
 	    burn_mod_twinb = 56
 		auto_converter = 57
 		charge_hack = 58
+		guided_missile_0 = 59
+		pump_action = 60
     }
 
     AddPersistenceEnum("pilotMod", pilotMod)
@@ -326,7 +328,7 @@ function InitPersistence()
 	    pas_build_up_nuclear_core = 10
 		pas_burst_boosters = 11
 		pas_flight_core = 12
-		pas_dual_ordnance = 13
+		//pas_pilot_link = 13
 		//pas_dual_tactical = 14
     }//watch my new passives bite me in the ass later, my game seems to crash every so often already cause of the amount of stuff i added.
 
@@ -511,6 +513,10 @@ function InitPersistence()
     AddPersistenceKey("titanLoadouts.passive2", "titanPassive")
     AddPersistenceKey("titanLoadouts.decal", "titanDecals")
     AddPersistenceKey("titanLoadouts.voiceChoice", "titanOS")
+	AddPersistenceKey("titanLoadouts.core", "titanCore")
+
+	//I hate loadout validation so much
+	//You can bypass ts with a single UI script but when I try to mod legitimately I'm screwed over
 
     ::modsCombined <- {
 	    mp_weapon_car_iron_sights = 0,
@@ -647,30 +653,33 @@ function InitPersistence()
 
 		mp_weapon_mega3_burn_mod_thunderbolt = 121,
 		mp_weapon_mega4_burn_mod_charge_cannon = 122,
-		mp_titanweapon_triple_threat_hydraulic_launcher = 123,
+
+		mp_titanweapon_triple_threat_hydraulic_launcher = 123
+		mp_weapon_sniper_scope_10x = 124,
+		mp_weapon_sniper_scope_12x = 125
+		mp_weapon_dmr_scope_10x = 126,
+		mp_weapon_dmr_scope_12x = 127
+
+		mp_titanweapon_shotgun_semi_converter = 128,
+		mp_weapon_mega3_extended_ammo = 129,
 		
-		mp_titanweapon_shotgun_semi_converter = 124,
-		mp_weapon_mega3_extended_ammo = 125,
-		
-		mp_weapon_shotgun_auto_converter = 126,
-		mp_weapon_mgl_extended_ammo = 127,
-		mp_weapon_defender_charge_hack = 128,
-		mp_weapon_mega2_match_trigger = 129,
-		mp_weapon_rocket_launcher_match_trigger = 130,
-		mp_weapon_sniper_tank_buster = 131,	
+		mp_weapon_shotgun_auto_converter = 130,
+		mp_weapon_mgl_extended_ammo = 131,
+		mp_weapon_defender_charge_hack = 132,
+		mp_weapon_mega2_match_trigger = 133,
+
+		mp_weapon_rocket_launcher_guided_missile_0 = 134,
+		mp_weapon_sniper_tank_buster = 135,	
+		mp_weapon_shotgun_pump_action = 136,
+		mp_weapon_lmg_scatterfire = 137,
 
 		// mp_weapon_g2_auto_converter = 127,
 		// mp_weapon_hemlok_auto_converter = 128,
-
 		// mp_weapon_mega9_extended_ammo = 130,
 		// mp_weapon_mega9_burst = 131,
-		
-
 		// mp_weapon_mega9_silencer = 131,
 		// mp_weapon_mega9_iron_sights = 132,
 		// mp_weapon_mega9_hcog = 133,
-		
-		
 		
     }
 
@@ -885,6 +894,9 @@ function InitPersistence()
     AddPersistenceKey("currentBurnCardPile", "int")
     AddPersistenceArray("currentBurnCardOffset", 3)
     AddPersistenceKey("currentBurnCardOffset", "int")
+    
+	AddPersistenceKey("currentBurnCardSortType", "int")
+    AddPersistenceKey("currentBurnCardSortIsReversed", "bool")
 
     AddPersistenceArray("burnCardDeck", 1000)
     AddPersistenceKey("burnCardDeck", "burnCard")
@@ -1911,7 +1923,7 @@ function InitPersistence()
     AddPersistenceKey("savedScoreboardData.campaign", "bool")
     AddPersistenceKey("savedScoreboardData.ranked", "bool")
     AddPersistenceKey("savedScoreboardData.hadMatchLossProtection", "bool")
-    AddPersistenceArray("savedScoreboardData.playersIMC", 8)
+    AddPersistenceArray("savedScoreboardData.playersIMC", 9)
     AddPersistenceKey("savedScoreboardData.playersIMC.name", "string")
     AddPersistenceKey("savedScoreboardData.playersIMC.xuid", "string")
     AddPersistenceKey("savedScoreboardData.playersIMC.level", "int")
@@ -1926,7 +1938,7 @@ function InitPersistence()
     AddPersistenceKey("savedScoreboardData.playersIMC.playingRanked", "bool")
     AddPersistenceKey("savedScoreboardData.playersIMC.rank", "int")
     AddPersistenceKey("savedScoreboardData.playersIMC.matchPerformance", "float")
-    AddPersistenceArray("savedScoreboardData.playersMCOR", 8)
+    AddPersistenceArray("savedScoreboardData.playersMCOR", 9)
     AddPersistenceKey("savedScoreboardData.playersMCOR.name", "string")
     AddPersistenceKey("savedScoreboardData.playersMCOR.xuid", "string")
     AddPersistenceKey("savedScoreboardData.playersMCOR.level", "int")
@@ -1974,7 +1986,7 @@ function InitPersistence()
     AddPersistenceKey("savedCoopData.players.enemyType.killCount", "int")
     AddPersistenceKey("savedCoopData.players.enemyType.turretKillCount", "int")
 
-    AddPersistenceArray("mapHistory", 24)
+    AddPersistenceArray("mapHistory", "maps")
     AddPersistenceKey("mapHistory", "int")
     AddPersistenceArray("modeHistory", 10)
     AddPersistenceKey("modeHistory", "int")

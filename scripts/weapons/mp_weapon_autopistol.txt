@@ -338,8 +338,10 @@ WeaponData
 		{
 			"fire_sound_2"						"" //Weapon_SmartPistol.SuppressedFire_Layer1
 			"bodygroup1_set"					"1"
-			"damage_near_value"   				"25"
-			"damage_far_value"					"25" // "15" Keeping the same because it's so low already.
+			"damage_near_value"   				"35" // "25"
+			"damage_far_value"					"30" // "25" Keeping the same because it's so low already.
+			"damage_near_distance"				"*0.9"
+			"damage_far_distance"				"*0.9"
 			//"rumble"  						"4"
 			"tracer_effect"   					"weapon_tracers_pistol"
 			"minimap_reveal_distance"			"1"

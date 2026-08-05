@@ -95,8 +95,21 @@ function ClientCommand_ActivateBurnCard(player, ...) {
 		return false
 	}
 
-	local cardRef = GetBurnCardFromSlot(player, index)
-	local cardIndex = GetBurnCardIndexByRef(cardRef)
+	// Get the card reference from the player's active burn card slot
+	local cardRef = GetPlayerActiveBurnCardSlotContents( player, index )
+	
+	if ( cardRef == null )
+		return false
+
+	if ( GetBurnCardFlags( cardRef ) & CT_TITAN_WPN || cardRef == "bc_extra_dash" )
+	{
+		SendHudMessage( player, "#GAMEMODE_CHANGE_BURNCARD_NEXT_TITAN", -1, 0.4, 255, 255, 255, 255, 1.0, 2.0, 1.0 )
+	}
+	else if ( IsAlive( player ) && !player.s.inGracePeriod )
+	{
+		SendHudMessage( player, "#GAMEMODE_CHANGE_BURNCARD_NEXT_SPAWN", -1, 0.4, 255, 255, 255, 255, 1.0, 2.0, 1.0 )
+	}
+
 	SetPlayerBurnCardOnDeckIndex(player, index)
 	EmitSoundOnEntityOnlyToPlayer( player, player, "UI_InGame_ActivateBurnCard" )
 	Remote.CallFunction_UI( player, "SCB_RefreshBurnCardSelector" )

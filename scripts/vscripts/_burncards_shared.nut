@@ -282,9 +282,11 @@ function GetRandomBurnCardGroup()
 	return Random( level.burnCardGroups )
 }
 
+const frag_flavor = "''In case of ticking sound, evacuate immediately and contact emergency services.''"
+
 function CreateAllBurnCards()
 {
-	CreateBurnCardWeapon( "bc_frag_m2",					BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON	| CT_FRAG									, "burncards/burncard_art_08", 	BC_NEXTDEATH, 		"#BC_FRAG_GRENADE_M2"		, "#BC_FRAG_GRENADE_M2_DESC"	, "#BC_FRAG_GRENADE_FLAVOR"				, "#BC_FLAVOR_LABEL",			"mp_weapon_frag_grenade",		"burn_mod_frag_grenade",				"OFFHAND0"		)
+	CreateBurnCardWeapon( "bc_frag_m2",					BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON	| CT_FRAG									, "burncards/burncard_art_08", 	BC_NEXTDEATH, 		"#BC_FRAG_GRENADE_M2"		, "#BC_FRAG_GRENADE_M2_DESC"	, frag_flavor							, "#BC_FLAVOR_LABEL",			"mp_weapon_frag_grenade",		"burn_mod_frag_grenade",				"OFFHAND0"		)
 	CreateBurnCardWeapon( "bc_arc_m2",					BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON	| CT_FRAG									, "burncards/burncard_art_11", 	BC_NEXTDEATH, 		"#BC_EMP_GRENADE_M2"		, "#BC_EMP_GRENADE_M2_DESC"		, "#BC_EMP_GRENADE_M2_FLAVOR"			, "#BC_FLAVOR_BLISK_ANGEL_CITY", "mp_weapon_grenade_emp",		"burn_mod_emp_grenade",					"OFFHAND0"		)
 	CreateBurnCardWeapon( "bc_prox_m2",					BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON	| CT_FRAG									, "burncards/burncard_art_10", 	BC_NEXTDEATH, 		"#BC_PROXIMITY_MINE_M2"		, "#BC_PROXIMITY_MINE_M2_DESC"	, "#BC_PROXIMITY_MINE_M2_FLAVOR"		, "#BC_FLAVOR_GRAVES",			"mp_weapon_proximity_mine",		"burn_mod_proximity_mine",				"OFFHAND0"		)
 	CreateBurnCardWeapon( "bc_satchel_m2",				BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON	| CT_FRAG									, "burncards/burncard_art_09", 	BC_NEXTDEATH, 		"#BC_SATCHEL_M2"			, "#BC_SATCHEL_M2_DESC"			, "#BC_SATCHEL_M2_FLAVOR"				, "#BC_FLAVOR_TITAN_FIGHTER",	"mp_weapon_satchel",			"burn_mod_satchel",						"OFFHAND0"		)
@@ -356,11 +358,11 @@ function CreateAllBurnCards()
 	CreateBurnCardSrvFlag( "bc_extra_dash", 					BURNCARD_COMMON, 	BCGROUP_SPEED, 		CT_TITAN 										, "burncards/amped_dash", 				BC_NEXTTITANDROP, "#BC_EXTRA_DASH" 	   					, "#BC_EXTRA_DASH_DESC" 				, "#BC_EXTRA_DASH_FLAVOR" 	   				, "#BC_FLAVOR_BISH",			SFLAG_BC_DASH_CAPACITY,				null,							null,			null						)
 
 	// R1DELTA BURN CARDS
-	const twinb_desc = "Replace Sidearm Weapon with a more lethal TWIN-B Shotgun"
-	const valk_desc = "Replace Primary Weapon with a Valkyrie Sniper that fires shield disruption rounds"
-	const wys_desc = "Replace Titan Weapon with a fully automatic WYS-0404 Shotgun"
-	const minigun_desc = "Replace Titan Weapon with an AG-8 Thunderbolt that fires instantly with no wind up"
-	const chargecannon_desc = "Charge Cannon reaches its maximum charge faster"
+	const twinb_desc = "Replace Sidearm Weapon with a more lethal TWIN-B Shotgun."
+	const valk_desc = "Replace Primary Weapon with a Valkyrie Sniper that rechambers faster."
+	const wys_desc = "Replace Titan Weapon with a fully automatic WYS-0404 Shotgun."
+	const minigun_desc = "Replace Titan Weapon with an AG-8 Thunderbolt that fires instantly with no wind up."
+	const chargecannon_desc = "Charge Cannon reaches its maximum charge faster."
 
 	const twinb_flavor = "''Technically, it's only illegal if it's not registered.''"
 	const valk_flavor = "''There are many like it, but this one is mine.''"
@@ -374,8 +376,8 @@ function CreateAllBurnCards()
 	// "#BC_FLAVOR_PILOT"
 	const warninglabel = "-Warning Label"
 
-	CreateBurnCardWeapon( "bc_valkyrie_m2",						BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON		| CT_SNIPER					, "burncards/amped_valkyrie",			BC_NEXTDEATH, 		"#BC_VALKYRIE_M2"				, "#BC_VALKYRIE_M2_DESC"			, valk_flavor							, vaughan, 					"mp_weapon_mega1",			"burn_mod_valkyrie",			"PRIMARY"			)
-	CreateBurnCardWeapon( "bc_twinb_m2",						BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON		| CT_SMG					, "burncards/amped_twinb",				BC_NEXTDEATH, 		"#BC_TWINB_SHOTGUN_M2"			, "#BC_TWINB_SHOTGUN_M2_DESC"		, twinb_flavor							, "#BC_FLAVOR_DANFORTH",	"mp_weapon_mega2",			"burn_mod_twinb",				"SIDEARM"			)
+	CreateBurnCardWeapon( "bc_valkyrie_m2",						BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON		| CT_SNIPER					, "burncards/amped_valkyrie",			BC_NEXTDEATH, 		"#BC_VALKYRIE_M2"				, valk_desc							, valk_flavor							, vaughan, 					"mp_weapon_mega1",			"burn_mod_valkyrie",			"PRIMARY"			)
+	CreateBurnCardWeapon( "bc_twinb_m2",						BURNCARD_COMMON, 	BCGROUP_WEAPON, 	CT_WEAPON		| CT_SMG					, "burncards/amped_twinb",				BC_NEXTDEATH, 		"#BC_TWINB_SHOTGUN_M2"			, twinb_desc						, twinb_flavor							, "#BC_FLAVOR_DANFORTH",	"mp_weapon_mega2",			"burn_mod_twinb",				"SIDEARM"			)
 	//CreateBurnCardWeapon( "bc_titan_shotgun_m2",				BURNCARD_RARE, 		BCGROUP_WEAPON, 	CT_TITAN_WPN	| CT_PRIMARY				, "burncards/amped_titan_shotgun", 		BC_NEXTTITANDROP, 	"#BC_TITAN_SHOTGUN_M2"			, "#BC_TITAN_SHOTGUN_M2_DESC"		, "#BC_TITAN_SHOTGUN_M2_FLAVOR"			, "#BC_FLAVOR_WONYEON",		"mp_titanweapon_shotgun",	"burn_mod_titan_shotgun", 		"TITAN_PRIMARY"		)
 	//CreateBurnCardWeapon( "bc_thunderbolt_m2",				BURNCARD_RARE, 		BCGROUP_WEAPON, 	CT_TITAN_WPN	| CT_PRIMARY				, "burncards/amped_thunderbolt", 		BC_NEXTTITANDROP, 	"#BC_TITAN_MINIGUN_M2"			, "#BC_TITAN_MINIGUN_M2_DESC"		, "#BC_TITAN_MINIGUN_M2_FLAVOR"			, "#BC_FLAVOR_PILOT",		"mp_weapon_mega3",			"burn_mod_thunderbolt", 		"TITAN_PRIMARY"		)
 	CreateBurnCardWeapon( "bc_titan_charge_cannon_m2",			BURNCARD_RARE, 		BCGROUP_WEAPON, 	CT_TITAN_WPN	| CT_TACTICAL				, "burncards/amped_charge_cannon", 		BC_NEXTTITANDROP, 	"#BC_TITAN_CHARGE_CANNON_M2"	, "#BC_TITAN_CHARGE_CANNON_M2_DESC"	, chargecannon_flavor					, warninglabel,				"mp_weapon_mega4",			"burn_mod_titan_charge_cannon",	"TITAN_OFFHAND1"	)
@@ -1961,3 +1963,191 @@ function GetSellCostOfRarity( rarity )
 			break
 	}
 }
+
+// Careful when touching this specific function or your entire deck will probably shit itself
+// The game doesnt like it when you dont sort arrays in a specific way
+function GetSortedBurnCards( deckArray, player = null )
+{
+	local sortedArray = deckArray
+	local sortType = GetPlayerBurnCardSortFunction( player )
+
+	sortedArray.sort( sortType )
+
+	return sortedArray
+}
+
+const MAX_CARD_SORT_TYPE = 2
+function GetPlayerBurnCardSortFunction( player = null )
+{
+	local sortType
+	local reversedSortType
+
+	local type
+	if ( player )
+		type = player.GetPersistentVar( "currentBurnCardSortType" )
+	else
+		type = GetPersistentVar( "currentBurnCardSortType" )
+
+	switch( type )
+	{
+		case 1:
+			sortType = BurnCardGroupSort
+			reversedSortType = BurnCardGroupSortReversed
+			break
+
+		case MAX_CARD_SORT_TYPE:
+			sortType = BurnCardRaritySort
+			reversedSortType = BurnCardRaritySortReversed
+			break
+
+		default:
+			sortType = BurnCardNumericSort
+			reversedSortType = BurnCardNumericSortReversed
+			break
+	}
+
+	if ( !ShouldReverseBurnCardDeck( player ) )
+		return sortType
+	else
+		return reversedSortType
+}
+
+function BurnCardNumericSort( card1, card2 )
+{
+	local index1 = GetBurnCardIndex( card1.cardRef )
+	local index2 = GetBurnCardIndex( card2.cardRef )
+
+	if ( index1 > index2 )
+		return 1
+	if ( index1 < index2 )
+		return -1
+
+	return 0
+}
+
+function BurnCardNumericSortReversed( card1, card2 )
+{
+	local index1 = GetBurnCardIndex( card1.cardRef )
+	local index2 = GetBurnCardIndex( card2.cardRef )
+
+	if ( index1 > index2 )
+		return -1
+	if ( index1 < index2 )
+		return 1
+
+	return 0
+}
+
+function BurnCardGroupSort( card1, card2 )
+{
+	local group1 = GetBurnCardGroup( card1.cardRef )
+	local group2 = GetBurnCardGroup( card2.cardRef )
+
+	if ( group1 > group2 )
+		return 1
+	if ( group1 < group2 )
+		return -1
+
+	if ( group1 == group2 )
+	{
+		local index1 = GetBurnCardIndex( card1.cardRef )
+		local index2 = GetBurnCardIndex( card2.cardRef )
+		if ( index1 > index2 )
+			return 1
+		if ( index1 < index2 )
+			return -1
+	}
+
+	return 0
+}
+
+function BurnCardGroupSortReversed( card1, card2 )
+{
+	local group1 = GetBurnCardGroup( card1.cardRef )
+	local group2 = GetBurnCardGroup( card2.cardRef )
+
+	if ( group1 > group2 )
+		return -1
+	if ( group1 < group2 )
+		return 1
+
+	if ( group1 == group2 )
+	{
+		local index1 = GetBurnCardIndex( card1.cardRef )
+		local index2 = GetBurnCardIndex( card2.cardRef )
+		if ( index1 > index2 )
+			return -1
+		if ( index1 < index2 )
+			return 1
+	}
+
+	return 0
+}
+
+function BurnCardRaritySort( card1, card2 )
+{
+	local rarity1 = GetBurnCardRarity( card1.cardRef )
+	local rarity2 = GetBurnCardRarity( card2.cardRef )
+
+	if ( rarity1 > rarity2 )
+		return 1
+	if ( rarity1 < rarity2 )
+		return -1
+
+	if ( rarity1 == rarity2 )
+	{
+		local index1 = GetBurnCardIndex( card1.cardRef )
+		local index2 = GetBurnCardIndex( card2.cardRef )
+
+		if ( index1 > index2 )
+			return 1
+		if ( index1 < index2 )
+			return -1
+	}
+
+	return 0
+}
+
+function BurnCardRaritySortReversed( card1, card2 )
+{
+	local rarity1 = GetBurnCardRarity( card1.cardRef )
+	local rarity2 = GetBurnCardRarity( card2.cardRef )
+
+	if ( rarity1 > rarity2 )
+		return -1
+	if ( rarity1 < rarity2 )
+		return 1
+
+	if ( rarity1 == rarity2 )
+	{
+		local index1 = GetBurnCardIndex( card1.cardRef )
+		local index2 = GetBurnCardIndex( card2.cardRef )
+
+		if ( index1 > index2 )
+			return -1
+		if ( index1 < index2 )
+			return 1
+	}
+
+	return 0
+}
+
+function ShouldReverseBurnCardDeck( player = null )
+{
+	if ( !player )
+		return GetPersistentVar( "currentBurnCardSortIsReversed" )
+
+	return player.GetPersistentVar( "currentBurnCardSortIsReversed" )
+}
+
+Globalize( GetSortedBurnCards )
+Globalize( GetPlayerBurnCardSortFunction )
+
+Globalize( BurnCardNumericSort )
+Globalize( BurnCardNumericSortReversed )
+Globalize( BurnCardGroupSort )
+Globalize( BurnCardGroupSortReversed )
+Globalize( BurnCardRaritySort )
+Globalize( BurnCardRaritySortReversed )
+
+Globalize( ShouldReverseBurnCardDeck )

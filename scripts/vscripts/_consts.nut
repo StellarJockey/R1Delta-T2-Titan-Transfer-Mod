@@ -58,12 +58,15 @@ const EXFILTRATION = "exfil"
 const TITAN_TAG = "tt"
 const SCAVENGER = "scv"
 const TITAN_ESCORT = "te"
+const VARIETY_PACK = "all"
+const DEADLY_GROUND = "lava"
 const DEVTEST = "devtest"
 const FFA = "ffa"
 const TITAN_BRAWL = "ttdm"
 const TITAN_BRAWL_AUTO = "ttdm_auto"
 const TITAN_MFD = "tmfd"
 const TITAN_MFD_PRO = "tmfdp"
+const GUN_GAME = "gg"
 
 const MAX_TRACKED_CHALLENGES = 3
 
@@ -1166,6 +1169,8 @@ const CE_FLAG_SONAR_ACTIVE			= 0x0100
 const CE_FLAG_WAVE_SPAWNING			= 0x0200
 const CE_FLAG_EOG_STAT_DISPLAY		= 0x0400
 
+const CE_FLAG_PERMANENT_HIDEHUD		= 0x0800
+
 const TITAN_DAMAGE_STAGE_FULL = 1.0
 const TITAN_DAMAGE_STAGE_1 = 0.75
 const TITAN_DAMAGE_STAGE_2 = 0.5
@@ -1622,7 +1627,8 @@ enum ePrivateMatchMaps
 	mp_zone_18,
 	mp_box,
 	mp_nest2,
-	mp_mia
+	mp_mia,
+	mp_npe
 }
 
 enum ePrivateMatchModes
@@ -1702,6 +1708,10 @@ enum eEventNotifications
 	YouWillBeAutobalanced,
 	MarkedForDeathMarkedAutobalanced,
 	AutoBalanceCooldown,
+	UplinkLocatingNextPanel,
+	TeammateSwitchedTeams,
+	EnemySwitchedTeams,
+	YouSwitchedTeams,
 }
 
 enum ePrivateMatchStartState
@@ -2119,7 +2129,6 @@ enum eChallengeCategory
 	WEAPON_DMR,
 	WEAPON_SNIPER,
 	WEAPON_VALKYRIE,
-	WEAPON_TWINB,
 
 	PILOT_SECONDARY,	// Only used by challenges menu
 
@@ -2133,6 +2142,7 @@ enum eChallengeCategory
 	WEAPON_AUTOPISTOL,
 	WEAPON_SEMIPISTOL
 	WEAPON_WINGMAN,
+	WEAPON_TWINB,
 
 	PILOT_ORDNANCE,
 
@@ -2533,6 +2543,14 @@ const WEAPON_TWINB_NAME = "mp_weapon_mega2"
 const WEAPON_THUNDERBOLT_NAME = "mp_weapon_mega3"
 const WEAPON_CHARGE_CANNON_NAME = "mp_weapon_mega4"
 const ABILITY_HOVER_NAME = "mp_weapon_mega5"
+
+enum eUIEvent
+{
+	MENU_OPEN,
+	MENU_CLOSE,
+	MENU_NAVIGATE_BACK,
+	MENU_INPUT_MODE_CHANGED
+}
 
 /*enum Cores
 {

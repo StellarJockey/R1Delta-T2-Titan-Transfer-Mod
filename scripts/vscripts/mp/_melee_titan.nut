@@ -67,6 +67,13 @@ function MeleeThread_TitanVsTitan_Internal( actions, action, attacker, target )
 
 	// should rename TitanType
 	local titanType = GetSoulTitanType(attacker.GetTitanSoul())
+	
+	// Identify the default, safe execution for the attacker's chassis
+	local defaultFunc = MeleeThread_AtlasVsTitan
+	if ( titanType == "stryder" )
+		defaultFunc = MeleeThread_StryderVsTitan
+	else if ( titanType == "ogre" )
+		defaultFunc = MeleeThread_OgreVsTitan
 
 	if ( target.IsNPC() && !TitanHasPilotInTitan( target ) )
 	{
@@ -74,46 +81,29 @@ function MeleeThread_TitanVsTitan_Internal( actions, action, attacker, target )
 	}
 	else
 	{
-		switch ( titanType )
+		// Choose one of the titan execution handlers at random
+		local execList = [ MeleeThread_AtlasVsTitan, MeleeThread_StryderVsTitan, MeleeThread_OgreVsTitan ]
+		func = Random( execList )
+
+		if ( attacker.IsPlayer() )
 		{
-			case "atlas":
-				func = MeleeThread_AtlasVsTitan
-				break
-
-			case "stryder":
-				func = MeleeThread_StryderVsTitan
-				break
-
-			case "ogre":
-				// func = MeleeThread_StryderVsTitan
-				func = MeleeThread_OgreVsTitan
-				break
+			local viewmodel = attacker.GetFirstPersonProxy()
+			local requiredAnim = ""
 			
-			default:
-				local numA = math.rand()
-				local numB = math.rand()
-				local numC = math.rand()
+			// Map the selected function to the first-person animation it requires
+			if ( func == MeleeThread_OgreVsTitan )
+				requiredAnim = "ogpov_melee_armrip_attacker"
+			else if ( func == MeleeThread_StryderVsTitan )
+				requiredAnim = "strypov_melee_sync_frontkill"
+			else if ( func == MeleeThread_AtlasVsTitan )
+				requiredAnim = "atpov_melee_sync_frontkill"
 
-				if( numA > numB > numC )
-				{
-					func = MeleeThread_AtlasVsTitan
-					break
-				}
-				else if( numA < numB > numC )
-				{
-					func = MeleeThread_StryderVsTitan
-					break
-				}
-				else if( numA < numB < numC )
-				{
-					func = MeleeThread_OgreVsTitan
-					break
-				}
-				else
-				{
-					func = MeleeThread_AtlasVsTitan
-					break
-				}
+			// If the viewmodel is missing the animation, fallback to default
+			if ( IsValid( viewmodel ) && requiredAnim != "" && !viewmodel.Anim_HasSequence( requiredAnim ) )
+			{
+				printt( "Viewmodel missing anim: " + requiredAnim + ". Falling back to " + titanType + " default." )
+				func = defaultFunc
+			}
 		}
 	}
 
@@ -515,15 +505,11 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	OnThreadEnd (
 		function () : ( targetTitan, target, attacker, e )
 		{
-			// insure visibility
-			if ( IsValid( targetTitan ) )
-				targetTitan.kv.VisibilityFlags = 7 // owner can see
-
-			if ( !IsAlive( attacker ) )
+			if ( IsValid( attacker ) && !IsAlive( attacker ) )
 			{
 				attacker.Anim_Stop()
 
-				if ( !e.thrown && IsAlive( target ) )
+				if ( IsValid( target ) && !e.thrown && IsAlive( target ) && target.IsPlayer() )
 				{
 					target.Anim_Stop()
 					target.SetOwner( null )
@@ -559,28 +545,21 @@ function TitanSyncedMeleeAnimationsPlay( attackerBodySequence, attackerViewBody,
 	thread FirstPersonSequence( targetBodySequence, target, ref )
 	thread FirstPersonSequence( attackerSequence, attacker, ref )
 	thread FirstPersonSequence( targetSequence, targetTitan, ref )
+	thread HandlePlayerTitanKill( target, targetTitan )
+	if ( !target.IsPlayer() )
+	thread KillTarget( attacker, target )
 	local duration = attacker.GetSequenceDuration( attackerSequence.thirdPersonAnim )
 
 	if ( e.targetAnimation3p == "at_melee_sync_frontdeath" )
 	{
 		thread MeleeThrowIntoWallSplat( attacker, target, e )
 	}
-	else
+	else if ( attacker.IsPlayer() || target.IsPlayer() )
 	{
 		AddAnimEvent( target, "pink_mist", MeleePinkMist, e )
 	}
 
-	local timer
-	local titanType = GetSoulTitanType(attacker.GetTitanSoul())
-
-	if ( titanType != null )
-	{
-		local titanDataTable = GetPlayerClassDataTable( attacker, "titan" )
-		local titanSettings = titanDataTable.playerSetFile
-		timer = GetPlayerSettingsFieldForClassName(titanSettings, "MeleeAnimationsTimer")
-	}
-
-	timer = 3.0
+	local timer = 1
 
 	wait timer
 
@@ -856,8 +835,7 @@ function MeleeThread_OgreVsTitan( actions, action, attacker, target )
 				if ( attacker.IsPlayer() )
 				{
 				    attacker.UnforceStand()
-				    attacker.ClearParent()
-					attacker.ClearAnimViewEntity()
+				    attacker.ClearAnimViewEntity()
 				    attacker.DeployWeapon()
 				}
 				attacker.ClearParent()

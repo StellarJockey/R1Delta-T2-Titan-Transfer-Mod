@@ -158,6 +158,7 @@ function MainHud_AddClient( player )
 
 	player.cv.startingXP <- GetXP( player )
 	player.cv.lastLevel <- GetLevel( player )
+	player.cv.xpBarInitialized <- false
 
 	g_targetOverheadHealthBar <- Hud.HudElement( "TargetOverheadHealthBar" )
 	g_targetOverheadDoomedHealthBar <- Hud.HudElement( "TargetOverheadDoomedHealthBar" )
@@ -3674,11 +3675,12 @@ function MainHud_InitXPBar( cockpit, player )
 
 	cockpit.s.xpBar <- {}
 
-	if ( player.cv.startingXP == 0 && player.cv.lastLevel == 1 )
-    {
-        player.cv.startingXP = GetXP( player ) 
-        player.cv.lastLevel = GetLevel( player )
-    }
+	if ( !player.cv.xpBarInitialized )
+	{
+		player.cv.startingXP = GetXP( player ) 
+		player.cv.lastLevel = GetLevel( player )
+		player.cv.xpBarInitialized = true  // SET FLAG
+	}
 
 	local xpBarGroup = HudElementGroup( "xpBarGroup" )
 	local panel = cockpit.s.mainVGUI.GetPanel()

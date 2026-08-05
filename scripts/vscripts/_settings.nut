@@ -246,7 +246,7 @@ if ( IsClient() )
 	GameMode_SetIcon( FFA, "../ui/menu/playlist/tdm" )
 	GameMode_AddServerScript( FFA, "mp/_gamemode_ffa" )
 	GameMode_AddClientScript( FFA, "client/cl_gamemode_ffa" )
-	GameMode_SetDefaultScoreLimits( FFA, 100, 0 )
+	GameMode_SetDefaultScoreLimits( FFA, 45, 0 )
 	GameMode_SetDefaultTimeLimits( FFA, 15, 0 )
 	//GameMode_AddServerScript( COOPERATIVE, "mp/_gamemode_coop")
 	//GameMode_AddClientScript( COOPERATIVE, "client/cl_gamemode_coop" )
@@ -280,7 +280,7 @@ if ( IsClient() )
 	GameMode_SetIcon( UPLINK, "../ui/menu/playlist/tdm" )
 	GameMode_AddServerScript( UPLINK, "mp/uplink" )
 	GameMode_AddClientScript( UPLINK, "client/cl_uplink" )
-	GameMode_SetDefaultScoreLimits( UPLINK, 5, 0 )
+	GameMode_SetDefaultScoreLimits( UPLINK, 160, 0 )
 	
 
 	GameMode_Create( TITAN_BRAWL )
@@ -325,6 +325,16 @@ if ( IsClient() )
 	GameMode_SetDefaultScoreLimits( TITAN_MFD_PRO, 0, 6)
 	GameMode_SetDefaultTimeLimits( TITAN_MFD_PRO, 0, 4 )
 
+	GameMode_Create( GUN_GAME )
+	GameMode_SetName( GUN_GAME, "#GAMEMODE_GUN_GAME" )
+	GameMode_SetGameModeAnnouncement( GUN_GAME, "GameModeAnnounce_TDM" )
+	GameMode_SetDesc( GUN_GAME, "#GAMEMODE_GUN_GAME_HINT" )
+	GameMode_SetIcon( GUN_GAME, "../ui/menu/playlist/tdm" )
+	GameMode_AddServerScript( GUN_GAME, "mp/_gamemode_gun_game" )
+	GameMode_AddClientScript( GUN_GAME, "client/cl_gamemode_gun_game" )
+	GameMode_SetDefaultScoreLimits( GUN_GAME, 20, 0 )
+	GameMode_SetDefaultTimeLimits( FFA, 15, 0 )
+
 // Don't remove items from this list once the game is in production
 // Durango online analytics needs the numbers for each mode to stay the same
 // DO NOT CHANGE THESE VALUES AFTER THEY HAVE GONE LIVE
@@ -357,7 +367,8 @@ enum eGameModes
 	TITAN_BRAWL_ID =					23,
 	TITAN_MFD_ID =						24,
 	TITAN_MFD_PRO_ID =					25,
-	TITAN_BRAWL_AUTO_ID =				26
+	TITAN_BRAWL_AUTO_ID =				26,
+	GUN_GAME_ID = 						27
 }
 
 gameModesStringToIdMap <- {}
@@ -388,6 +399,7 @@ gameModesStringToIdMap[ TITAN_BRAWL ] 						<- eGameModes.TITAN_BRAWL_ID
 gameModesStringToIdMap[ TITAN_BRAWL_AUTO ] 					<- eGameModes.TITAN_BRAWL_AUTO_ID
 gameModesStringToIdMap[ TITAN_MFD ]							<- eGameModes.TITAN_MFD_ID
 gameModesStringToIdMap[ TITAN_MFD_PRO ]						<- eGameModes.TITAN_MFD_PRO_ID
+gameModesStringToIdMap[ GUN_GAME ]							<- eGameModes.GUN_GAME_ID
 
 GameMode_VerifyModes()
 
@@ -972,6 +984,7 @@ enum eRocketPodState
 PLAYER_HEALTH_BAR_CLASSNAMES 							<- {}
 PLAYER_HEALTH_BAR_CLASSNAMES["npc_dropship"]			<- true
 PLAYER_HEALTH_BAR_CLASSNAMES["npc_turret_mega"]			<- true
+PLAYER_HEALTH_BAR_CLASSNAMES["npc_turret_mega_bb"]		<- true
 PLAYER_HEALTH_BAR_CLASSNAMES["npc_turret_sentry"]		<- true
 
 const HEALTH_BARS_ENABLED_SP							= 1			// Turn on/off health bar drawing

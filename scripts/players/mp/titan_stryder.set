@@ -97,7 +97,7 @@
 
 		aiEnemy_priority		50
 
-		footstep_type           "atlas"
+		footstep_type           "stryder"
 
 		titan_footstep_damage_height_check_ratio 0.15
 

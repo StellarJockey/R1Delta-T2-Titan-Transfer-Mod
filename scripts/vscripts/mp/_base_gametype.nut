@@ -59,12 +59,15 @@ function main()
 		level.shouldPlayerBeEliminatedFuncTable <- null
     	level.lastForceSwitchTime <- {} // Track last force switch time per player
 
+		level.customPlayerEliminatedMessage <- null
+
 		CreateTeamColorControlPoints()
 
 		AddClientCommandCallback( "CC_SelectRespawn", ClientCommand_SelectRespawn ) //
  		AddClientCommandCallback( "CC_RespawnPlayer", ClientCommand_RespawnPlayer ) //
 
 		AddClientCommandCallback( "PrivateMatchEndMatch", ClientCommand_PrivateMatchEndMatch )
+		AddClientCommandCallback( "SwitchMe", ClientCommand_SwitchMe )
 
 		AddCallback_GameStateEnter( eGameState.Playing, GameStart_AutoBalanceCooldown )
 
@@ -1376,8 +1379,12 @@ function CodeCallback_OnPlayerKilled( player, damageInfo )
 {
 	Remote.CallFunction_NonReplay( player, "ServerCallback_YouDied" )
 
+	// Nexon clears the objective when doing this because they used the objective system
+	// To show people how to deploy their titan etc
+	// We dont use any of that, so getting rid of this
+
 	// [LJS] hud 에 탈출 알람 or 타이탄 알람 삭제.
-	ClearPlayerActiveObjective( player )
+	//ClearPlayerActiveObjective( player )
 
 	local team = player.GetTeam()
 	Assert( player.GetTeam() > TEAM_SPECTATOR )
@@ -1730,7 +1737,11 @@ function DecideRespawnPlayer( player, rematchOrigin = null )
 		// printt( "are we observing?" )
 		if ( IsPlayerEliminated( player ) && GetGameState() == eGameState.Playing )
 		{
-			SendHudMessage( player, "#GAMEMODE_RESPAWN_NEXT_ROUND", -1, 0.4, 255, 255, 255, 255, 1.0, 6.0, 1.0 )
+			// Can also be replaced with a custom function if people need it
+			if ( level.customPlayerEliminatedMessage )
+				SendHudMessage( player, level.customPlayerEliminatedMessage, -1, 0.4, 255, 255, 255, 255, 1.0, 6.0, 1.0 )
+			else
+				SendHudMessage( player, "#GAMEMODE_RESPAWN_NEXT_ROUND", -1, 0.4, 255, 255, 255, 255, 1.0, 6.0, 1.0 )
 		}
 
 		thread ObserverThread( player )
@@ -1869,7 +1880,7 @@ function RespawnTitanPilot( player, rematchOrigin = null )
 		if ( GetWaveSpawnType() != eWaveSpawnType.DISABLED && level.waveSpawnByDropship == true )
 			MessageToPlayer( player, eEventNotifications.Clear )
 
-		thread TitanPlayerHotDropsIntoLevel( player )
+		thread TitanPlayerHotDropsIntoLevel( player, rematchOrigin )
 
 		TitanDeployed( player )
 
@@ -2006,7 +2017,7 @@ function ShouldStartSpawn( player )
 }
 
 
-function TitanPlayerHotDropsIntoLevel( player )
+function TitanPlayerHotDropsIntoLevel( player, rematchOrigin = null )
 {
 	printl( "TitanPlayerHotDropsIntoLevel" )
 
@@ -2025,6 +2036,10 @@ function TitanPlayerHotDropsIntoLevel( player )
 	if ( startSpawn )
 	{
 		spawnPoint = FindStartSpawnPoint( player, true )
+	}
+	else if ( rematchOrigin && Riff_TitanExitIsDisabled() )
+	{
+		spawnPoint = FindClosestSpawnPoint( player, rematchOrigin, true )
 	}
 	else
 	{
@@ -2301,7 +2316,7 @@ function CodeCallback_OnPlayerRespawned( player )
 		{
 			printt( "Forcing player " + player.GetPlayerName() + " back to Militia on respawn in Cooperative mode." )
 			player.SetTeam( TEAM_MILITIA )
-			NotifyClientsOfTeamChange( player, GetOtherTeam(TEAM_MILITIA), TEAM_MILITIA ) // Notify clients about the team change
+			NotifyClientsOfTeamChange( player, GetOtherTeam(TEAM_MILITIA), TEAM_MILITIA, true ) // Notify clients about the team change
 		}
 	}
 	
@@ -2316,7 +2331,7 @@ function CodeCallback_OnPlayerRespawned( player )
 }
 
 // TODO: dont use this yet, its still missing a lot of checks for if the player is still alive and doing something
-function AutoBalancePlayer_Delayed( player, delay, forceSwitch = false )
+function AutoBalancePlayer_Delayed( player, delay, manual = false, forceSwitch = false )
 {
 	player.EndSignal( "OnDeath" )
 	player.EndSignal( "OnDestroy" )
@@ -2328,9 +2343,12 @@ function AutoBalancePlayer_Delayed( player, delay, forceSwitch = false )
 		AutoBalancePlayer( player, forceSwitch )
 }
 
-function AutoBalancePlayer( player, forceSwitch = false )
+// manualSwitch is basically just the *old* forceswitch
+// The *NEW* forceSwitch is meant to be a dev thing, so we dont need to wait the 15 seconds
+// Every time we want to switch teams when testing something
+function AutoBalancePlayer( player, manualSwitch = false, forceSwitch = false )
 {
-	if ( !ShouldAutoBalancePlayer( player, forceSwitch ) )
+	if ( !ShouldAutoBalancePlayer( player, manualSwitch, forceSwitch ) )
 		return
 
 	local currentTeam = player.GetTeam()
@@ -2344,7 +2362,7 @@ function AutoBalancePlayer( player, forceSwitch = false )
 
 	// Check if current team is over target and other team is under target
 	// TODO: potentially check the players KDR and autobalance them if its too crazy?
-	if ( forceSwitch || ( currentTeamCount > targetPerTeam && otherTeamCount < targetPerTeam ) )
+	if ( manualSwitch || forceSwitch || ( currentTeamCount > targetPerTeam && otherTeamCount < targetPerTeam ) )
 	{
 		printt( "AutoBalancing player " + player.GetPlayerName() + " from team " + currentTeam + " to team " + otherTeam )
 
@@ -2375,9 +2393,9 @@ function AutoBalancePlayer( player, forceSwitch = false )
 		// Switch player team
 		player.TrueTeamSwitch()
 		local newTeam = player.GetTeam() // Get the new team after switching
-		if ( forceSwitch )
+		if ( manualSwitch )
         {
-			printt( "AutoBalancePlayer: Forcing team switch for player " + player.GetPlayerName() )
+			printt( "AutoBalancePlayer: Doing manual team switch for player " + player.GetPlayerName() )
             level.lastForceSwitchTime[player.GetUID()] <- Time()
         }
 		// Switch pet titan team if it exists
@@ -2457,15 +2475,68 @@ function AutoBalancePlayer( player, forceSwitch = false )
 						playerSoul.chargeCannon.model.SetTeam( newTeam )
 				}
 			}
-			else
-			{
-				printt( "Autobalance: WARNING - Could not determine correct model name for player " + player + " using playerSetFile '" + classSettings + "' and field '" + modelFieldName + "'" )
-			}
+			
+			// Fix rodeo viewmodel not changing skin
+			local viewModel = player.GetFirstPersonProxy()
+			if ( viewModel )
+				viewModel.SetSkin( player.GetSkin() )
 		}
 
-		NotifyClientsOfTeamChange( player, currentTeam, newTeam ) // Notify clients about the team change
+		NotifyClientsOfTeamChange( player, currentTeam, newTeam, ( manualSwitch || forceSwitch ) ) // Notify clients about the team change
 
 		thread PostAutoBalanceThink( player, newTeam )
+				NotifyClientsOfTeamChange( player, currentTeam, newTeam ) // Notify clients about the team change
+
+		local ai = GetNPCArrayByClass( "npc_soldier" )
+		ai.extend( GetNPCArrayByClass( "npc_spectre" ) )
+
+		foreach( npc in ai )
+		{
+			// Swap hacked Spectres and conscripted grunts
+			if ( npc.GetBossPlayer() == player )
+				npc.SetTeam( newTeam )
+
+			// Only these two NPCs use the overhead teammate indicator
+			local eHandle = npc.GetEncodedEHandle()
+			Remote.CallFunction_Replay( player, "ServerCallback_UpdateOverheadIconForNPC", eHandle )
+		}
+
+		local turrets = GetNPCArrayByClass( "npc_turret_mega" )
+		turrets.extend( GetNPCArrayByClass( "npc_turret_mega_bb" ) )
+		turrets.extend( GetNPCArrayByClass( "npc_turret_sentry" ) )
+
+		foreach ( npc in turrets )
+		{
+			// Swap hacked turrets
+			if ( npc.GetBossPlayer() != player )
+				continue
+
+			switch( npc.GetClassname() )
+			{
+				case "npc_turret_sentry":
+					npc.SetTeam( newTeam )
+					npc.SetSkin( player.GetSkin() )
+					break
+
+				case "npc_tureet_mega_bb":
+					BBTurretChangeTeam( npc, newTeam )
+
+					local terminal = npc.GetControlPanel()
+					if ( terminal )
+						terminal.SetTeam( newTeam )
+					
+					break
+
+				default:
+					TurretChangeTeam( npc, newTeam )
+
+					local terminal = npc.GetControlPanel()
+					if ( terminal )
+						terminal.SetTeam( newTeam )
+
+					break
+			}
+		}
 
 		foreach ( callbackInfo in level.onPostAutoBalanceCallbacks )
 		{
@@ -2474,7 +2545,7 @@ function AutoBalancePlayer( player, forceSwitch = false )
 	}
 }
 
-function ShouldAutoBalancePlayer( player, forceSwitch )
+function ShouldAutoBalancePlayer( player, manualSwitch, forceSwitch = false )
 {
 	if ( !GamePlayingOrSuddenDeath() )
 		return false
@@ -2488,28 +2559,46 @@ function ShouldAutoBalancePlayer( player, forceSwitch )
 	if ( GameRules.GetGameMode() == COOPERATIVE )
 		return false
 
+	if ( GameRules.GetGameMode() == WINGMAN_LAST_TITAN_STANDING )
+		return false
+
 	if ( IsFFABased() )
 		return false
 
 	if ( player.s.respawnCount < 1 )
 		return false
 
-	if ( !forceSwitch )
+	// Cant be executing or hacking
+	if ( player.ContextAction_IsMeleeExecution() || player.ContextAction_IsLeeching() )
+		return false
+
+	// Prevent the player controlling the titan in ctt from changing teams
+	// level.teamFlag = the titans soul
+	if ( GameRules.GetGameMode() == CAPTURE_THE_TITAN && level.teamFlag && level.teamFlag.GetBossPlayer() == player )
+		return false
+
+	// Cant be evacing
+	if ( player in level.playersOnDropship )
+		return false
+
+	if ( !manualSwitch && !forceSwitch )
 	{
 		// Game is about to end anyways
 		if ( GetMatchProgress() >= 90 )
 			return false
 	}
-	else
+	else if ( manualSwitch && !forceSwitch )
     {
         local playerUID = player.GetUID()
         if ( playerUID in level.lastForceSwitchTime )
         {
+			local autobalanceCooldown = 15.0
+
             local timeSinceLastSwitch = Time() - level.lastForceSwitchTime[playerUID]
-            if ( timeSinceLastSwitch < 15.0 )
+            if ( timeSinceLastSwitch < autobalanceCooldown )
             {	                
-				local timeRemaining = ceil( 15.0 - timeSinceLastSwitch )
-                printt( "Force switch on cooldown for player " + player.GetPlayerName() + " - " + (15.0 - timeSinceLastSwitch) + " seconds remaining" )
+				local timeRemaining = ceil( autobalanceCooldown - timeSinceLastSwitch )
+                printt( "Force switch on cooldown for player " + player.GetPlayerName() + " - " + (autobalanceCooldown - timeSinceLastSwitch) + " seconds remaining" )
 				// MessageToPlayer( player, eEventNotifications.AutoBalanceCooldown, null, timeRemaining )
 				// send a hud text message instead of event notification
 				SendHudMessage( player, "You can switch teams again in " + timeRemaining + " seconds", -1, 0.4, 255, 255, 255, 255, 1.0, 2.0, 1.0 )
@@ -2539,9 +2628,6 @@ function PostAutoBalanceThink( player, newTeam )
 	}
 
 	wait 2
-
-	if ( player )
-		player.s.forceDisableFlagTouch = false
 }
 
 function GameStart_AutoBalanceCooldown()
@@ -2550,6 +2636,14 @@ function GameStart_AutoBalanceCooldown()
 	{
 		level.lastForceSwitchTime[ player.GetUID() ] <- Time()
 	}
+}
+
+function ClientCommand_SwitchMe( player, ... )
+{
+	if ( GetConVarBool( "sv_cheats" ) && vargc > 0 && vargv[0].tointeger() == 1 )
+		AutoBalancePlayer( player, false, true )
+	else
+		AutoBalancePlayer( player, true )
 }
 
 function GetEmbarkPlayer( titan )
@@ -2747,7 +2841,7 @@ function CodeCallback_OnClientConnectionStarted( player )
 
 	player.s.lastNagTime <- 0
 
-	player.s.forceDisableFlagTouch <- false
+	player.s.nextFlagTouchTime <- 0
 
 	Assert( !player._entityVars )
 	InitEntityVars( player )
@@ -2886,163 +2980,165 @@ function OnPlayerCloseClassMenu( player )
 // playerconnected
 function CodeCallback_OnClientConnectionCompleted( player )
 {
-    // 이미 종료되는 매치인 경우 다시 연결 끊는다.
-    if( GetGameState() >= eGameState.Postmatch)
-    {
-        //player.ForceLeaveMatch_Native()
-        return
-    }
+	// 이미 종료되는 매치인 경우 다시 연결 끊는다.
+	if( GetGameState() >= eGameState.Postmatch)
+	{
+		//player.ForceLeaveMatch_Native()
+		return
+	}
 
-    player.connectTime = Time()
-    player.hasConnected = true
+	player.connectTime = Time()
+	player.hasConnected = true
 
     if ( GetGameState() <= eGameState.WaitingForPlayers )
-        MuteSFX( player, 0.0 )
-    MuteAll( player, 0.0 )
-    UnMuteAll( player )
+		MuteSFX( player, 0.0 )
+	MuteAll( player, 0.0 )
+	UnMuteAll( player )
 
-    MeleeInit( player )
-    ZiplineInit( player )
-    player.s.lastFastTime <- 0
+	MeleeInit( player )
+	ZiplineInit( player )
+	player.s.lastFastTime <- 0
 
-    InitPassives( player )
+	InitPassives( player )
 
-    if ( !player.IsBot() && !IsTrainingLevel() )
-    {
-        // LoadOut Setting
-        // UpdateLoadouts( player )
-        local pilotIndex = player.GetPersistentVar("pilotSpawnLoadout.index")
-        local pilotIsCustom = player.GetPersistentVar("pilotSpawnLoadout.isCustom")
+	InitPersistentData( player )
+	InitPlayerStats( player )
+	InitPlayerChallenges( player )
+	UpdatePlayerDecalUnlocks( player, false )
+	ValidateCustomLoadouts( player )
 
-        local titanIndex = player.GetPersistentVar("titanSpawnLoadout.index")
-        local titanIsCustom = player.GetPersistentVar("titanSpawnLoadout.isCustom")
+	if ( !player.IsBot() && !IsTrainingLevel() )
+	{
+		// LoadOut Setting
+		// UpdateLoadouts( player )
+		local pilotIndex = player.GetPersistentVar("pilotSpawnLoadout.index")
+		local pilotIsCustom = player.GetPersistentVar("pilotSpawnLoadout.isCustom")
 
-        SetPilotLoadout( player, pilotIsCustom, pilotIndex )
-        SetTitanLoadout( player, titanIsCustom, titanIndex )
+		local titanIndex = player.GetPersistentVar("titanSpawnLoadout.index")
+		local titanIsCustom = player.GetPersistentVar("titanSpawnLoadout.isCustom")
 
-    }
-    else
-    {
-        SetBotTitanLoadout( player )
-        SetBotPilotLoadout( player )
-    }
+		SetPilotLoadout( player, pilotIsCustom, pilotIndex )
+		SetTitanLoadout( player, titanIsCustom, titanIndex )
 
-    UpdateMinimapStatus( player )
-    UpdateMinimapStatusToOtherPlayers( player )
+	}
+	else
+	{
+		SetBotTitanLoadout( player )
+		SetBotPilotLoadout( player )
+	}
 
-    player.s.activeSatchels        <- []
-    player.s.activeProximityMines   <- []
-    player.s.activeLaserMines   <- []
-    player.s.activeTripleThreatMines    <- []
+	UpdateMinimapStatus( player )
+	UpdateMinimapStatusToOtherPlayers( player )
 
-    // 타이탄 빌드룰 초기화
-    InitTitanBuildRule( player )
-    ResetTitanBuildCompleteCondition( player )
+	player.s.activeSatchels		<- []
+	player.s.activeProximityMines 	<- []
+	player.s.activeLaserMines	<- []
+	player.s.activeTripleThreatMines	<- []
 
-    if( GetGameState() == eGameState.Playing )
-    {
-        StartTitanBuildProgress( player )
-    }
+	// 타이탄 빌드룰 초기화
+	InitTitanBuildRule( player )
+	ResetTitanBuildCompleteCondition( player )
 
-    if ( Flag( "CinematicIntro" ) && GetGameState() <= eGameState.Prematch )
-    {
-        thread TryAddPlayerToCinematic( player )
-    }
-    else
-    {
-        if ( player.IsBot() )
-        {
-            local pilotBot = GetPilotBotFlag();
-            if ( !pilotBot )
-            {
-                player.playerClassData["titan"].playerSetFile = botSettings
+	if( GetGameState() == eGameState.Playing )
+	{
+		StartTitanBuildProgress( player )
+	}
 
-                if ( !botSettings )
-                {
-                    /*local rInt = RandomInt( Native_GetTitanCount() )
-                    local titanName = Native_GetTitanName(rInt)
-                    player.playerClassData["titan"].playerSetFile = titanName
-                    */
+	if ( Flag( "CinematicIntro" ) && GetGameState() <= eGameState.Prematch )
+	{
+		thread TryAddPlayerToCinematic( player )
+	}
+	else
+	{
+		if ( player.IsBot() )
+		{
+			local pilotBot = GetPilotBotFlag();
+			if ( !pilotBot )
+			{
+				player.playerClassData["titan"].playerSetFile = botSettings
 
-                    local rInt = RandomInt( 3 )
+				if ( !botSettings )
+				{
+					/*local rInt = RandomInt( Native_GetTitanCount() )
+					local titanName = Native_GetTitanName(rInt)
+					player.playerClassData["titan"].playerSetFile = titanName
+					*/
 
-                    if ( rInt == 0 )
-                        player.playerClassData["titan"].playerSetFile = "titan_ogre"
-                    else if ( rInt == 1 )
-                        player.playerClassData["titan"].playerSetFile = "titan_atlas"
-                    else if ( rInt == 2 )
-                        player.playerClassData["titan"].playerSetFile = "titan_stryder"
-                    // else
-                        // player.playerClassData["titan"].playerSetFile = "titan_slammer"
+					local rInt = RandomInt( 3 )
 
-                }
-            }
+					if ( rInt == 0 )
+						player.playerClassData["titan"].playerSetFile = "titan_ogre"
+					else if ( rInt == 1 )
+						player.playerClassData["titan"].playerSetFile = "titan_atlas"
+					else if ( rInt == 2 )
+						player.playerClassData["titan"].playerSetFile = "titan_stryder"
+					// else
+						// player.playerClassData["titan"].playerSetFile = "titan_slammer"
 
-            // Added via AddCallback_OnClientConnected
-            foreach ( callbackInfo in level.onClientConnectedCallbacks )
-            {
-                callbackInfo.func.acall( [callbackInfo.scope, player] )
-            }
+				}
+			}
 
-            // below here is NOT BOT ONLY, but only randomly. Should fix to be consistent for bots.
-            MinimapPlayerConnected( player )
+			// Added via AddCallback_OnClientConnected
+			foreach ( callbackInfo in level.onClientConnectedCallbacks )
+			{
+				callbackInfo.func.acall( [callbackInfo.scope, player] )
+			}
 
-            DecideRespawnPlayer( player )
+			// below here is NOT BOT ONLY, but only randomly. Should fix to be consistent for bots.
+			MinimapPlayerConnected( player )
 
-            local botCaller = GetPlayerArray()[0]
-            local spot = GetTitanReplacementPoint(botCaller)
-            local origin = spot.origin
-            local dir =  botCaller.GetOrigin() - origin
-            local angles = dir.GetAngles()//Vector(0,0,0)
+			DecideRespawnPlayer( player )
 
-            player.SetOrigin( origin )
-            player.SetAngles( angles )
-            return
-        }
+			local botCaller = GetPlayerArray()[0]
+			local spot = GetTitanReplacementPoint(botCaller)
+			local origin = spot.origin
+			local dir =  botCaller.GetOrigin() - origin
+			local angles = dir.GetAngles()//Vector(0,0,0)
 
-        if ( ShouldPlayerBeEliminated( player ) )
-            SetPlayerEliminated( player )
-        else if ( GetGameState() == eGameState.SwitchingSides )
-            SetPlayerEliminated( player )
-    }
+			player.SetOrigin( origin )
+			player.SetAngles( angles )
+			return
+		}
 
-    // below here is NOT BOT ONLY, but only randomly. Should fix to be consistent for bots.
-    MinimapPlayerConnected( player )
+		if ( ShouldPlayerBeEliminated( player ) )
+			SetPlayerEliminated( player )
+		else if ( GetGameState() == eGameState.SwitchingSides )
+			SetPlayerEliminated( player )
+	}
 
-    InitLeeching( player )
+	// below here is NOT BOT ONLY, but only randomly. Should fix to be consistent for bots.
+	MinimapPlayerConnected( player )
 
-    CheckForEmptyTeamVictory()
+	InitLeeching( player )
 
-    NotifyClientsOfConnection( player, 1 )
+	CheckForEmptyTeamVictory()
 
-    DebugSendClientFrontline( player )
+	NotifyClientsOfConnection( player, 1 )
 
-    PlayCurrentTeamMusicEventsOnPlayer( player )
-    SetCurrentTeamObjectiveForPlayer( player )
-    InitPersistentData( player )
-    InitPlayerStats( player )
-    InitPlayerChallenges( player )
-    UpdatePlayerDecalUnlocks( player, false )
-    ValidateCustomLoadouts( player )
-    SaveDateLoggedIn( player )
-    FinishClientScriptInitialization( player )
+	DebugSendClientFrontline( player )
 
-    if ( ShouldPlayerHaveLossProtection( player ) )
-    {
-        player.s.hasMatchLossProtection = true
-        Remote.CallFunction_NonReplay( player, "ServerCallback_GiveMatchLossProtection" )
-    }
+	PlayCurrentTeamMusicEventsOnPlayer( player )
+	SetCurrentTeamObjectiveForPlayer( player )
 
-    UpdateBadRepPresent()
+	SaveDateLoggedIn( player )
+	FinishClientScriptInitialization( player )
 
-    // Added via AddCallback_OnClientConnected
-    foreach ( callbackInfo in level.onClientConnectedCallbacks )
-    {
-        callbackInfo.func.acall( [callbackInfo.scope, player] )
-    }
+	if ( ShouldPlayerHaveLossProtection( player ) )
+	{
+		player.s.hasMatchLossProtection = true
+		Remote.CallFunction_NonReplay( player, "ServerCallback_GiveMatchLossProtection" )
+	}
 
-    if ( Flag( "CinematicIntro" ) && GetGameState() <= eGameState.Prematch )
-        return
+	UpdateBadRepPresent()
+
+	// Added via AddCallback_OnClientConnected
+	foreach ( callbackInfo in level.onClientConnectedCallbacks )
+	{
+		callbackInfo.func.acall( [callbackInfo.scope, player] )
+	}
+
+	if ( Flag( "CinematicIntro" ) && GetGameState() <= eGameState.Prematch )
+		return
 
     // Skip respawn if this is a solo private match in prematch
     if ( IsPrivateMatch() && GetPlayerArray().len() == 1 && GetGameState() == eGameState.Prematch )
@@ -3050,10 +3146,10 @@ function CodeCallback_OnClientConnectionCompleted( player )
         return
     }
 
-    if ( GetGameState() == eGameState.Playing || GetGameState() == eGameState.Prematch || GetGameState() == eGameState.SuddenDeath )
-        DecideRespawnPlayer( player )
-    else if ( Flag( "CinematicEnding" ) )
-        DecideRespawnPlayer( player )
+	if ( GetGameState() == eGameState.Playing || GetGameState() == eGameState.Prematch || GetGameState() == eGameState.SuddenDeath )
+		DecideRespawnPlayer( player )
+	else if ( Flag( "CinematicEnding" ) )
+		DecideRespawnPlayer( player )
 }
 
 function ShouldPlayerHaveLossProtection( player )
@@ -3184,7 +3280,7 @@ function NotifyClientsOfConnection( player, state )
 	}
 }
 
-function NotifyClientsOfTeamChange( player, oldTeam, newTeam )
+function NotifyClientsOfTeamChange( player, oldTeam, newTeam, wasManual )
 {
 	local playerEHandle = player.GetEncodedEHandle()
 	local players = GetPlayerArray()
@@ -3193,17 +3289,34 @@ function NotifyClientsOfTeamChange( player, oldTeam, newTeam )
 		//if ( ent != player )
 		Remote.CallFunction_Replay( ent, "ServerCallback_PlayerChangedTeams", playerEHandle, oldTeam, newTeam )
 
+		local message = null
+
 		if ( player != ent )
 		{
 			if ( ent.GetTeam() == oldTeam )
-				MessageToPlayer( ent, eEventNotifications.TeammateAutobalanced, null, null )
+			{
+				if ( wasManual )
+					message = eEventNotifications.TeammateSwitchedTeams
+				else
+					message = eEventNotifications.TeammateAutobalanced
+			}
 			else if ( ent.GetTeam() == newTeam )
-				MessageToPlayer( ent, eEventNotifications.EnemyAutobalanced, null, null )
+			{
+				if ( wasManual )
+					message = eEventNotifications.EnemySwitchedTeams
+				else
+					message = eEventNotifications.EnemyAutobalanced
+			}
 		}
 		else
 		{
-			MessageToPlayer( ent, eEventNotifications.YouWereAutobalanced, null, null )
+			if ( wasManual )
+				message = eEventNotifications.YouSwitchedTeams
+			else
+				message = eEventNotifications.YouWereAutobalanced
 		}
+
+		MessageToPlayer( ent, message, null, null )
 	}
 }
 
@@ -3334,6 +3447,9 @@ function CheckForEmptyTeamVictory()
 	if ( !IsRoundBased() && (GetGameState() >= eGameState.WinnerDetermined) )
 		return
 	if ( IsRoundBased() && level.nv.gameEndTime )
+		return
+
+	if (GetConVarBool("delta_allow_empty_server"))
 		return
 
 	if ( GamePlayingOrSuddenDeath() && (GameTime.PlayingTime() >= START_SPAWN_GRACE_PERIOD) )

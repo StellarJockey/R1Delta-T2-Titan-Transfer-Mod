@@ -290,24 +290,25 @@ function ScoreEvent_TitanKilled( titan, attacker, inflictor, damageSourceId, wea
 
 		scoreEvent = "Kill" + scriptName
 
-		switch ( footstepType )
+		switch ( settings )
 		{
-			case "stryder":
+			case "titan_stryder":
 				scoreEvent = "KillStryder"
 				break
 
-			case "slammer":
-				scoreEvent = "KillSlammer"
-				break
+			//case "titan_slammer":
+			//	scoreEvent = "KillSlammer"
+			//	break
 
-			case "atlas":
+			case "titan_atlas":
 				scoreEvent = "KillAtlas"
 				break
 
-			case "ogre":
+			case "titan_ogre":
 				scoreEvent = "KillOgre"
 				break
 		}
+
 		if ( GAMETYPE == COOPERATIVE )
 		{
 			if ( IsNukeTitan( titan ) )

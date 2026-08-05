@@ -225,6 +225,12 @@ function HumanRodeoViewCone( human, titanType )
 		case "special_stryder":
 		case "special_atlas":
 		case "special_ogre":
+			human.PlayerCone_SetMinYaw( -100 )
+			human.PlayerCone_SetMaxYaw( 100 )
+			human.PlayerCone_SetMinPitch( -40 )
+			human.PlayerCone_SetMaxPitch( 40 )
+			break
+
 		case "stryder":
 			human.PlayerCone_SetMinYaw( -100 )
 			human.PlayerCone_SetMaxYaw( 60 )
@@ -248,8 +254,8 @@ function MoveToLegalSolidFromTitan( mover, titan )
 	Assert( mover.IsPlayer() )
 
 	local attachIndex = titan.LookupAttachment( "hijack" )
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-		//attachIndex = titan.LookupAttachment( "rodeo" )
+	if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
+		attachIndex = titan.LookupAttachment( "chestfocus" )//chestfocus
 	local start = titan.GetAttachmentOrigin( attachIndex )
 	local end = mover.GetOrigin()
 
@@ -394,6 +400,9 @@ function PlayerBeginsRodeo( player, rodeoPackage, titan )
 
 	local titanType = GetSoulTitanType( soul )
 
+	if ( titanType == "special_stryder" || titanType == "special_atlas" || titanType == "special_ogre" )
+		titanType = "stryder"
+
 	player.SetTitanSoulBeingRodeoed( soul )
 	player.ForceStand()
 
@@ -494,8 +503,8 @@ function PlayerLerpsIntoTitanRodeo( player, titan, package, doHatchRip = false, 
 	local sequence = CreateFirstPersonSequence()
 	sequence.attachment = "hijack"
 
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-		//sequence.attachment = "rodeo"
+	if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
+		sequence.attachment = "chestfocus"
 
 
 	switch ( package.method )
@@ -602,10 +611,13 @@ function PlayerRipsOpenTitanHatch( player, soul, e )
 	local titanType = GetSoulTitanType( soul )
 	local anims = level.rodeoAnimations
 
+	if ( titanType == "special_stryder" || titanType == "special_atlas" || titanType == "special_ogre" )
+		titanType = "stryder"
+
 	local sequence = CreateFirstPersonSequence()
 	sequence.attachment = "hijack"
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-		//sequence.attachment = "rodeo"
+	if ( GetSoulTitanType( soul ) == "special_ogre" )//modded
+		sequence.attachment = "chestfocus"
 	sequence.thirdPersonAnim 		= GetAnimFromAlias( titanType, anims.thirdPersonAnimAlias_PanelOpen )
 	sequence.thirdPersonAnimIdle 	= GetAnimFromAlias( titanType, anims.thirdPersonAnimAlias_AimIdle )
 	sequence.firstPersonAnim 		= GetAnimFromAlias( titanType, anims.firstPersonAnimAlias_PanelOpen )
@@ -691,10 +703,13 @@ function RodeoPlayerSeesDisembark( human, soul )
 	local titanType = GetSoulTitanType( soul )
 	local sequence = CreateFirstPersonSequence()
 
+	if ( titanType == "special_stryder" || titanType == "special_atlas" || titanType == "special_ogre" )
+		titanType = "stryder"
+
 	sequence.blendTime = 0
 	sequence.attachment = "hijack"
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded, but am unsure on this one
-		//sequence.attachment = "rodeo"
+	if ( GetSoulTitanType( soul ) == "special_ogre" )//modded, but am unsure on this one
+		sequence.attachment = "chestfocus"
 	sequence.thirdPersonAnim 		= GetAnimFromAlias( titanType, anims.thirdPersonAnimAlias_lean )
 	sequence.thirdPersonAnimIdle 	= GetAnimFromAlias( titanType, anims.thirdPersonAnimAlias_AimIdle )
 	sequence.firstPersonAnim 		= GetAnimFromAlias( titanType, anims.firstPersonAnimAlias_lean_enemy )
@@ -970,8 +985,8 @@ function SpectreLerpsIntoTitanRodeo( spectre, soul, package )
 	soul.GetTitan().EndSignal( "Disconnected" )
 
 	local attachment 	= "hijack"
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-		//attachment = "rodeo"
+	if ( GetSoulTitanType( soul ) == "special_ogre" )//modded
+		attachment = "chestfocus"
 	local blendTime 	= null
 	local jumpFirst 	= false
 
@@ -1007,8 +1022,8 @@ function SpectreLerpsIntoTitanRodeo( spectre, soul, package )
 		local angles = VectorToAngles( vec )
 		spectre.SetAngles( angles )
 		local parent_string = "hijack"
-		//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-			//parent_string = "rodeo"
+		if ( GetSoulTitanType( soul ) == "special_ogre" )//modded
+			parent_string = "chestfocus"
 
 		spectre.SetParent( soul.GetTitan(), parent_string, false, parentBlend )
 		spectre.Anim_ScriptedPlay( jumpAnim )
@@ -1076,8 +1091,8 @@ function SpectreRipsOpenTitanHatch( spectre, soul, e )
 
 
 	local attachment = "hijack"
-	//if ( GetSoulTitanType( titan.GetTitanSoul() ) == "special_ogre" )//modded
-		//attachment = "rodeo"
+	if ( GetSoulTitanType( soul ) == "special_ogre" )//modded
+		attachment = "chestfocus"
 
 	local thirdPersonAnim 		= GetAnimFromAlias( titanType, anims.thirdPersonAnimAlias_PanelOpen )
 

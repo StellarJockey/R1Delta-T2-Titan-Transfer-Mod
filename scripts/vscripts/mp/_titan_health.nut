@@ -96,12 +96,25 @@ function HitRodeoBrain( soul, damageInfo )
 	return damageInfo.GetHitBox() == soul.rodeoHitBoxNumber
 }
 
-function IsRodeoBrainDamage( soul, damageInfo )
+function IsRodeoBrainDamage( soul, damageInfo )//Not a good solution but works for now, ttf2 titans are..difficult.
 {
 	if ( !IsRodeoDamage( soul, damageInfo ) )
 		return false
+	
+	local modded_titan = false
+	switch( GetSoulTitanType( soul ) )
+	{
+		case "special_ogre":
+		case "special_atlas":
+		case "special_stryder":
+			modded_titan = true
+			break
+		
+		default:
+			break
+	}
 
-	if ( !HitRodeoBrain( soul, damageInfo ) )
+	if ( !HitRodeoBrain( soul, damageInfo ) && modded_titan == false )
 		return false
 
 	return true

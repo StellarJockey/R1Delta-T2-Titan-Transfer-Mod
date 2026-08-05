@@ -55,12 +55,12 @@ function main()
 	level.rodeoHitBoxNumber[ OGRE_MODEL ] <- 41
 	level.rodeoHitBoxNumber[ DESTROYER_MODEL ] <- 30
 //what does this do
-	level.rodeoHitBoxNumber[ LEGION_MODEL ] <- 40
-	level.rodeoHitBoxNumber[ SCORCH_MODEL ] <- 39
-	level.rodeoHitBoxNumber[ ION_MODEL ] <- 35
+	level.rodeoHitBoxNumber[ LEGION_MODEL ] <- 53
+	level.rodeoHitBoxNumber[ SCORCH_MODEL ] <- 53
+	level.rodeoHitBoxNumber[ ION_MODEL ] <- 53
 	//level.rodeoHitBoxNumber[ TONE_MODEL ] <- 36
-	level.rodeoHitBoxNumber[ NORTHSTAR_MODEL ] <- 51
-	level.rodeoHitBoxNumber[ RONIN_MODEL ] <- 52
+	level.rodeoHitBoxNumber[ NORTHSTAR_MODEL ] <- 53
+	level.rodeoHitBoxNumber[ RONIN_MODEL ] <- 53
 
 	Globalize( CodeCallback_PlayerInTitanCockpit )
 

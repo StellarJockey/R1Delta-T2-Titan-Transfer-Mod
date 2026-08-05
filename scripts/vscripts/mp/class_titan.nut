@@ -177,7 +177,7 @@ function GiveTitanWeaponsForPlayer( player, titan, existingTitan = false )
 
 		//printl( table.passive2 )
 
-		if ( table.passive2 == 18 )//why was it called 18 by the table though?
+		if ( titan.GetModelName() == "models/titans/heavy/titan_heavy_ogre.mdl" )//why was it called 18 by the table though?
 		{
 			offhand_weaponry[1].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, true )
 		}
@@ -186,7 +186,7 @@ function GiveTitanWeaponsForPlayer( player, titan, existingTitan = false )
 			offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 		}
 
-		if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
+		if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
 		{
 			offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 		}
@@ -281,7 +281,7 @@ function GiveHotDropTitanWeaponsForPlayer( player, titan )
 
 	local offhand_weaponry = [ ord_stuff, tac_stuff ]
 
-	if ( table.passive2 == 18 )
+	if ( titan.GetModelName() == "models/titans/heavy/titan_heavy_ogre.mdl" )//table.passive2 == 18
 	{
 		offhand_weaponry[1].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, true )
 	}
@@ -290,7 +290,7 @@ function GiveHotDropTitanWeaponsForPlayer( player, titan )
 		offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 	}
 	
-	if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
+	if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
 	{
 		offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 	}
@@ -343,7 +343,7 @@ function GiveTitanWeaponsForLoadoutData( titan, table )
 
 		//printl( table.passive2 )
 
-	if ( table.passive2 == 18 )//why was it called 18 by the table though?
+	if( titan.GetModelName() == "models/titans/heavy/titan_heavy_ogre.mdl" )//if ( table.passive2 == 18 )//why was it called 18 by the table though?
 	{
 		offhand_weaponry[1].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, true )
 	}
@@ -352,7 +352,7 @@ function GiveTitanWeaponsForLoadoutData( titan, table )
 		offhand_weaponry[0].weapon = TryDualOffhandWeaponry( offhands[1].weapon, offhands[0].weapon, false )
 	}
 	
-	if ( titan.GetModelName() == "models/titans/light/imc/titan_light_raptor_i.mdl" || titan.GetModelName() == "models/titans/light/militia/titan_light_raptor_m.mdl" )//ok yes i know that a model search is bad... but i see no options here
+	if ( titan.GetModelName() == "models/titans/light/titan_light_raptor.mdl" )//ok yes i know that a model search is bad... but i see no options here
 	{
 		offhand_weaponry[1].weapon = "mp_weapon_mega5" //afterall, thats the downside of BMT
 	}
@@ -497,6 +497,7 @@ function TryDualOffhandWeaponry( loadout_special, loadout_ordnance, replaces_tac
 					return "mp_titanweapon_salvo_rockets"
 				if ( loadout_ordnance == "mp_titanweapon_salvo_rockets" )
 					return "mp_titanweapon_shoulder_rockets"
+				return "mp_titanweapon_salvo_rockets"
 		}
 	}
 	else
@@ -533,13 +534,14 @@ function TryDualOffhandWeaponry( loadout_special, loadout_ordnance, replaces_tac
 			
 			default:
 				if ( loadout_ordnance == "mp_titanweapon_salvo_rockets" )
-					return "mp_titanweapon_shoulder_rockets"
+					return "mp_weapon_mega4"
 				if ( loadout_ordnance == "mp_titanweapon_homing_rockets" )
-					return "mp_titanweapon_salvo_rockets"
+					return "mp_titanweapon_vortex_shield"
 				if ( loadout_ordnance == "mp_titanweapon_dumbfire_rockets" )
-					return "mp_titanweapon_homing_rockets"
+					return "mp_titanability_smoke"
 				if ( loadout_ordnance == "mp_titanweapon_shoulder_rockets" )
-					return "mp_titanweapon_dumbfire_rockets"
+					return "mp_titanweapon_bubble_shield"
+				return "mp_titanweapon_vortex_shield"
 		}
 	}
 }
